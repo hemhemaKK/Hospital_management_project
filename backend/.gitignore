@@ -1,0 +1,2 @@
+.env
+echo "backend/node_modules" >> .gitignore
