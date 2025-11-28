@@ -1,12 +1,10 @@
 import User from "../models/User.js";
 import Category from "../models/Category.js";
 
-const ADMIN_EMAIL = "mcaprojecttestemail@gmail.com";
-
 // Get all users
 export const getAllUsers = async (req, res) => {
   try {
-    if (req.user.email !== ADMIN_EMAIL)
+    if (req.user.role !== "admin")
       return res.status(403).json({ message: "Access denied: not admin" });
 
     const users = await User.find().select("-password -otp");
@@ -17,73 +15,85 @@ export const getAllUsers = async (req, res) => {
 };
 
 // Get all employees
-export const getAllEmployees = async (req, res) => {
+// Get all doctors
+export const getAllDoctors = async (req, res) => {
   try {
-    const employees = await User.find({ role: "employee" })
-      .populate("selectedCategory", "name") 
+    const doctors = await User.find({ role: "doctor" })
+      .populate("selectedCategory", "name")
       .sort({ createdAt: -1 })
-      .select("name email role isApproved");
-    res.status(200).json(employees);
+      .select("name email role phone isApproved selectedCategory");
+
+    res.status(200).json(doctors);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Get all pending employees
-export const getPendingEmployees = async (req, res) => {
+// Get pending doctors (correct role name)
+export const getPendingDoctors = async (req, res) => {
   try {
-    const pending = await User.find({ role: "employee_pending" }).select("name email role isApproved");
+    const pending = await User.find({ role: "doctor_pending" })
+      .select("name email role isApproved");
+
     res.status(200).json(pending);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Approve employee (initial approval)
-export const approveEmployee = async (req, res) => {
+// Approve doctor
+export const approveDoctors = async (req, res) => {
   try {
     const { id } = req.params;
-    const employee = await User.findById(id);
-    if (!employee || employee.role !== "employee") return res.status(404).json({ message: "Employee not found" });
+    const doctor = await User.findById(id);
 
-    employee.isApproved = true;
-    await employee.save();
+    if (!doctor || (doctor.role !== "doctor" && doctor.role !== "doctor_pending"))
+      return res.status(404).json({ message: "Doctor not found" });
 
-    res.status(200).json({ message: "Employee approved", employee });
+    doctor.role = "doctor"; // convert pending → active
+    doctor.isApproved = true;
+
+    await doctor.save();
+
+    res.status(200).json({ message: "Doctor approved", doctor });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Toggle approval (approve <-> disapprove)
-export const toggleEmployeeApproval = async (req, res) => {
+// Toggle doctor approval
+export const toggleDoctorApproval = async (req, res) => {
   try {
     const { id } = req.params;
-    const employee = await User.findById(id);
-    if (!employee || employee.role !== "employee") return res.status(404).json({ message: "Employee not found" });
+    const doctor = await User.findById(id);
 
-    employee.isApproved = !employee.isApproved;
-    await employee.save();
+    if (!doctor || doctor.role !== "doctor")
+      return res.status(404).json({ message: "Doctor not found" });
+
+    doctor.isApproved = !doctor.isApproved;
+    await doctor.save();
 
     res.status(200).json({
-      message: employee.isApproved ? "Employee approved" : "Employee disapproved",
-      employee
+      message: doctor.isApproved ? "Doctor approved" : "Doctor disapproved",
+      doctor
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Reject employee
-export const rejectEmployee = async (req, res) => {
+// Reject doctor
+export const rejectDoctor = async (req, res) => {
   try {
     const { id } = req.params;
-    const employee = await User.findById(id);
-    if (!employee || (employee.role !== "employee" && employee.role !== "employee_pending"))
-      return res.status(404).json({ message: "Employee not found" });
+    const doctor = await User.findById(id);
+
+    if (!doctor || (doctor.role !== "doctor" && doctor.role !== "doctor_pending"))
+      return res.status(404).json({ message: "Doctor not found" });
 
     await User.findByIdAndDelete(id);
-    res.status(200).json({ message: "Employee rejected and deleted" });
+
+    res.status(200).json({ message: "Doctor rejected and deleted" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -107,7 +117,7 @@ export const deleteUser = async (req, res) => {
 
 export const createCategory = async (req, res) => {
   try {
-    if (req.user.email !== ADMIN_EMAIL)
+    if (req.user.role !== "admin")
       return res.status(403).json({ message: "Access denied: not admin" });
 
     const { name, description } = req.body;
@@ -135,7 +145,7 @@ export const getAllCategories = async (req, res) => {
 // Update category
 export const updateCategory = async (req, res) => {
   try {
-    if (req.user.email !== ADMIN_EMAIL)
+    if (req.user.role !== "admin")
       return res.status(403).json({ message: "Access denied: not admin" });
 
     const { id } = req.params;
@@ -158,7 +168,7 @@ export const updateCategory = async (req, res) => {
 // Delete category
 export const deleteCategory = async (req, res) => {
   try {
-    if (req.user.email !== ADMIN_EMAIL)
+    if (req.user.role !== "admin")
       return res.status(403).json({ message: "Access denied: not admin" });
 
     const { id } = req.params;
@@ -175,7 +185,7 @@ export const deleteCategory = async (req, res) => {
 // Tickets & Contacts
 export const getAllTickets = async (req, res) => {
   try {
-    if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ message: "Access denied" });
+    if (req.user.role !== "admin") return res.status(403).json({ message: "Access denied" });
 
     const users = await User.find().select("name email supportTickets");
     const tickets = users.flatMap(user =>

@@ -12,30 +12,88 @@ const ticketSchema = new mongoose.Schema({
   subject: { type: String, required: true },
   message: { type: String, required: true },
   status: { type: String, default: "open", enum: ["open", "pending", "closed"] },
-  reply: { type: String, default: "" },          // Admin reply
-  replyAt: { type: Date },                       // Timestamp of reply
+  reply: { type: String, default: "" },
+  replyAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 
-const userSchema = new mongoose.Schema({
-  name: String,
-  email: { type: String, unique: true },
-  password: String,
-  otp: Number,
-  isVerified: { type: Boolean, default: false },
-  googleId: String,
-  role: { type: String, enum: ["admin", "employee", "subemployee", "user"], default: "user" },
-  profilePic: { type: String, default: "" },
-  phone: { type: String, default: "" },
-  isPhoneVerified: { type: Boolean, default: false },
-  isApproved: { type: Boolean, default: false },
-  // New fields
-  reviews: [reviewSchema],        // Array of reviews
-  supportTickets: [ticketSchema], // Array of tickets with reply
-  hasReviewed: { type: Boolean, default: false },
-  selectedCategory: { type: mongoose.Schema.Types.ObjectId, ref: "Category" }, // new field
- 
-});
+const userSchema = new mongoose.Schema(
+  {
+    firstName: { type: String },
+    lastName: { type: String },
+    fullName: { type: String },
+
+    email: { type: String, unique: true },
+    password: String,
+    otp: Number,
+    isVerified: { type: Boolean, default: false },
+
+    googleId: String,
+
+    // Corrected roles
+    role: {
+      type: String,
+      enum: [
+        "superadmin",
+        "admin",
+        "doctor",
+        "nurse",
+        "receptionist",
+        "pharmacist",
+        "user"
+      ],
+      default: "user"
+    },
+
+    profilePic: { type: String, default: "" },
+    phone: { type: String, default: "" },
+    isPhoneVerified: { type: Boolean, default: false },
+    isApproved: { type: Boolean, default: false },
+
+    /* ------------------------------------------------------------------
+       HOSPITAL ADMIN RELATED FIELDS
+    ------------------------------------------------------------------ */
+
+    isHospital: { type: Boolean, default: false },
+
+    hospitalName: { type: String ,required: true },
+    address: { type: String ,required: true },
+    licenseNumber: { type: String, unique: true, sparse: true,required: true  },
+    hospitalPhone: { type: String ,required: true },
+
+    hospitalStatus: {
+      type: String,
+      enum: ["PENDING", "VERIFIED", "ACTIVE", "SUSPENDED", "INACTIVE"],
+      default: "PENDING"
+    },
+
+    
+    /* ------------------------------------------------------------------
+       DOCTOR RELATED FIELDS
+    ------------------------------------------------------------------ */
+
+    selectedHospital: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // hospital admin
+      default: null
+    },
+
+    selectedCategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      default: null
+    },
+
+    /* ------------------------------------------------------------------
+       FEATURES
+    ------------------------------------------------------------------ */
+
+    reviews: [reviewSchema],
+    supportTickets: [ticketSchema],
+    hasReviewed: { type: Boolean, default: false }
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("User", userSchema);

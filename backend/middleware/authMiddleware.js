@@ -10,7 +10,7 @@ export const requireAuth = async (req, res, next) => {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     // Fetch full user from DB
-    const user = await User.findById(payload.id);
+    const user = await User.findById(payload.id).select("-password -otp");;
     if (!user) return res.status(401).json({ message: "User not found" });
 
     req.user = user; // now req.user._id exists

@@ -5,14 +5,14 @@ const {
   getAllTickets,
   createCategory,
   getAllCategories,
-  getAllEmployees,
+  getAllDoctors,
   deleteUser,
   deleteCategory,
   updateCategory,
-  getPendingEmployees,
-  approveEmployee,
-  rejectEmployee,
-  toggleEmployeeApproval
+  getPendingDoctors,
+  approveDoctors,
+  rejectDoctor,
+  toggleDoctorApproval
 } = require("../controllers/adminController");
 
 const router = express.Router();
@@ -21,12 +21,12 @@ const router = express.Router();
 router.get("/users", requireAuth, getAllUsers);
 router.delete("/users/:id", requireAuth, deleteUser);
 
-// Employee management
-router.get("/employees", requireAuth, getAllEmployees);
-router.get("/employees/pending", requireAuth, getPendingEmployees);
-router.put("/employees/approve/:id", requireAuth, approveEmployee);
-router.delete("/employees/reject/:id", requireAuth, rejectEmployee);
-router.put("/employees/toggle/:id", requireAuth, toggleEmployeeApproval);
+// Doctor management
+router.get("/doctors", requireAuth, getAllDoctors);
+router.get("/doctors/pending", requireAuth, getPendingDoctors);
+router.put("/doctors/approve/:id", requireAuth, approveDoctors);
+router.delete("/doctors/reject/:id", requireAuth, rejectDoctor);
+router.put("/doctors/toggle/:id", requireAuth, toggleDoctorApproval);
 
 // Category management
 router.post("/category", requireAuth, createCategory);
