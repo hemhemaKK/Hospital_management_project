@@ -24,6 +24,7 @@ const prescriptionSchema = new mongoose.Schema({
   dosage: { type: String, required: true },
   duration: { type: String, required: true },
   notes: { type: String, default: "" },
+  prescribedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -42,12 +43,13 @@ const appointmentSchema = new mongoose.Schema({
   doctor: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   nurse: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
-  category: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital" },
+  // FIXED
+  category: { type: mongoose.Schema.Types.ObjectId },  
   hospital: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital" },
 
-  date: { type: String },
-  time: { type: String },
-  description: { type: String },
+  date: String,
+  time: String,
+  description: String,
 
   status: {
     type: String,

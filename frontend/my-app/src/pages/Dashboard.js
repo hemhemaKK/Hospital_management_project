@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { FaBars, FaTimes } from "react-icons/fa";
+
 import ProfileSettings from "../pages/ProfileSettings";
 import SupportTicket from "./Support";
 import Complaint from "./UserComplaints";
 import ComplaintStatus from "./complaintStatus";
 import Chatbot from "./chatbot";
+
+// 🆕 Appointment Components (YOU WILL SEND THESE NEXT)
+import Appointment from "./Appointment";
+import AppointmentStatus from "./AppointmentStatus";
+import Reports from "./Reports";
+import Prescription from "./Prescription";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -29,10 +36,10 @@ export default function Dashboard() {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No token found");
 
-        const res = await axios.get(
-          "http://localhost:5000/api/profile",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const res = await axios.get("http://localhost:5000/api/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
         setUser(res.data.user);
       } catch (err) {
         console.error("Authorization error:", err);
@@ -49,7 +56,16 @@ export default function Dashboard() {
   if (loading) return <p>Loading...</p>;
   if (!user) return <p>User data not found.</p>;
 
-  const sections = ["Dashboard", "Complaints", "Status", "Support", "Profile"];
+  // FIXED SECTION NAMES
+  const sections = [
+    "Dashboard",
+    "Appointment",
+    "Appointment Status",
+    "Report",
+    "Prescription",
+    "Support",
+    "Profile",
+  ];
 
   const renderSection = () => {
     switch (activeSection) {
@@ -62,19 +78,28 @@ export default function Dashboard() {
             </div>
           </div>
         );
+
       case "Profile":
         return <ProfileSettings user={user} />;
+
       case "Support":
         return <SupportTicket user={user} />;
-      case "Complaints":
-      case "Assigned Complaints":
-      case "All Complaints":
-        return <Complaint user={user} />;
-      case "Status":
+
+      case "Complaint Status":
         return <ComplaintStatus user={user} />;
-      case "Manage Users":
-      case "Reports":
-        return <p>{activeSection} content for Admin</p>;
+
+      case "Appointment":
+        return <Appointment user={user} />;
+
+      case "Appointment Status":
+        return <AppointmentStatus user={user} />;
+
+      case "Report":
+        return <Reports user={user} />;
+
+      case "Prescription":
+        return <Prescription user={user} />;
+
       default:
         return <p>Section not found</p>;
     }
@@ -82,25 +107,20 @@ export default function Dashboard() {
 
   return (
     <div style={mainContainer}>
-      {/* Hamburger for mobile */}
       {isMobile && (
         <div onClick={() => setMenuOpen(!menuOpen)} style={hamburgerStyle}>
           {menuOpen ? <FaTimes /> : <FaBars />}
         </div>
       )}
 
-      {/* Overlay for mobile menu */}
       {isMobile && menuOpen && (
         <div style={overlayStyle} onClick={() => setMenuOpen(false)} />
       )}
 
-      {/* Sidebar/Menu */}
       <div
         style={{
           ...menuStyle,
           left: isMobile ? (menuOpen ? "0" : "-250px") : "0",
-          boxShadow:
-            isMobile && menuOpen ? "2px 0 8px rgba(0,0,0,0.3)" : "none",
           transition: "left 0.3s ease-in-out",
         }}
       >
@@ -145,7 +165,6 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Main Content */}
       <div style={contentStyle(isMobile)}>
         {renderSection()}
         <Chatbot userId={user._id} />
@@ -166,12 +185,11 @@ const hamburgerStyle = {
   left: "25px",
   zIndex: 1001,
   fontSize: "28px",
-  color: "#000000ff",
+  color: "#000",
   backgroundColor: "#fff",
   borderRadius: "8px",
   padding: "6px 8px",
   cursor: "pointer",
-  boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
 };
 
 const overlayStyle = {
@@ -194,13 +212,10 @@ const menuStyle = {
   position: "fixed",
   top: 0,
   bottom: 0,
-  zIndex: 1000,
 };
 
 const userInfoStyle = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
+  textAlign: "center",
   marginBottom: "2rem",
 };
 
@@ -235,7 +250,7 @@ const logoutButtonStyle = {
 const contentStyle = (isMobile) => ({
   flex: 1,
   padding: "2rem",
-  marginLeft: isMobile ? "0" : "250px", // responsive margin
+  marginLeft: isMobile ? "0" : "250px",
   transition: "margin-left 0.3s ease-in-out",
   background: "linear-gradient(135deg, #f4f4f4, #e0e7ff)",
 });
@@ -246,11 +261,10 @@ const cards = {
   gap: "20px",
 };
 
-const cardStyle = (isMobile)=>({
+const cardStyle = (isMobile) => ({
   background: "linear-gradient(135deg, #ffffff, #f0f4ff)",
   borderRadius: "15px",
   padding: "2rem",
   boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
-  marginTop: isMobile ? "100px" : "20px", // responsive margin
-  
+  marginTop: isMobile ? "100px" : "20px",
 });
