@@ -238,7 +238,6 @@ exports.googleCallback = async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect(`${process.env.FRONTEND_URL}/login`);
 
-    // Get tokens from Google
     const { tokens } = await oauthClient.getToken(code);
     const ticket = await oauthClient.verifyIdToken({
       idToken: tokens.id_token,
@@ -248,29 +247,37 @@ exports.googleCallback = async (req, res) => {
     const payload = ticket.getPayload();
     const { email, name, picture, sub } = payload;
 
-    // Check if user already exists
     let user = await User.findOne({ email });
 
     if (!user) {
-      // Create new user
+      // Identify role based on email prefix
+      let role = "user";
+      const lower = email.toLowerCase();
+
+      if (lower.startsWith("superadmin")) role = "superadmin";
+      else if (lower.startsWith("doctor")) role = "doctor";
+      else if (lower.startsWith("nurse")) role = "nurse";
+      else if (lower.startsWith("recep")) role = "receptionist";
+      else if (lower.startsWith("pharma")) role = "pharmacist";
+
       user = await User.create({
         name,
         email,
         googleId: sub,
         isVerified: true,
         profilePic: picture,
-        role: "user",
+        role,
       });
     }
 
     const token = generateToken(user);
 
-    // Redirect to frontend with token in query
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     return res.redirect(`${frontendUrl}/google-callback?token=${token}&role=${user.role}`);
 
   } catch (err) {
     console.error("Google OAuth Error:", err);
-    return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=google_login_failed`);
+    return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_login_failed`);
   }
 };
+

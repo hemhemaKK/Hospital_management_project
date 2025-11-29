@@ -11,11 +11,11 @@ export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [user, setUser] = useState(null);
 
-  const [stats, setStats] = useState({ users: 0, doctors: 0, tickets: 0, categories: 0 });
+  const [stats, setStats] = useState({ users: 0, doctors: 0, tickets: 0, Deparment: 0 });
 
   const [users, setUsers] = useState([]);
   const [doctors, setDoctors] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [Deparment, setDeparment] = useState([]);
 
   // category form
   const [categoryForm, setCategoryForm] = useState({ name: "", description: "" });
@@ -44,8 +44,8 @@ export default function AdminDashboard() {
 
     const fetchAllData = async () => {
       try {
-        // parallel fetch: users, doctors, categories
-        const [usersRes, doctorsRes, categoriesRes] = await Promise.all([
+        // parallel fetch: users, doctors, Deparment
+        const [usersRes, doctorsRes, DeparmentRes] = await Promise.all([
           axios.get(`${BASE_URL}/api/admin/users`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
@@ -59,7 +59,7 @@ export default function AdminDashboard() {
 
         const usersData = usersRes.data || [];
         const doctorsData = doctorsRes.data || [];
-        const categoriesData = categoriesRes.data || [];
+        const DeparmentData = DeparmentRes.data || [];
 
         const allTickets = usersData.flatMap((u) => u.supportTickets || []);
 
@@ -67,12 +67,12 @@ export default function AdminDashboard() {
           users: usersData.length,
           doctors: doctorsData.length,
           tickets: allTickets.length,
-          categories: categoriesData.length,
+          Deparment: DeparmentData.length,
         });
 
         setUsers(usersData);
         setDoctors(doctorsData);
-        setCategories(categoriesData);
+        setDeparment(DeparmentData);
       } catch (err) {
         console.error("Error fetching admin data:", err);
         alert("Error fetching admin data — check console.");
@@ -193,7 +193,7 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setDoctors((prev) => prev.map((d) => (d._id === id ? { ...d, isApproved: true } : d)));
+      setDoctors((prev) => prev.map((d) => (d._id === id ? { ...d, isVerified: true } : d)));
     } catch (err) {
       console.error("approveDoctor error:", err);
       alert("Failed to approve doctor");
@@ -207,7 +207,7 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setDoctors((prev) => prev.map((d) => (d._id === id ? { ...d, isApproved: !d.isApproved } : d)));
+      setDoctors((prev) => prev.map((d) => (d._id === id ? { ...d, isVerified: !d.isVerified } : d)));
     } catch (err) {
       console.error("toggleDoctor error:", err);
       alert("Failed to toggle doctor status");
@@ -241,7 +241,7 @@ export default function AdminDashboard() {
     }
   };
 
-  /* ---------------- CATEGORIES ACTIONS ---------------- */
+  /* ---------------- Deparment ACTIONS ---------------- */
   const addCategory = async () => {
     if (!categoryForm.name) return alert("Category name required");
     try {
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
 
       // backend returns res.data.category (see your controller)
       const created = res.data.category || res.data;
-      setCategories((prev) => [created, ...prev]);
+      setDeparment((prev) => [created, ...prev]);
       setCategoryForm({ name: "", description: "" });
     } catch (err) {
       console.error("addCategory error:", err);
@@ -400,22 +400,71 @@ export default function AdminDashboard() {
       </div>
     );
   };
+const [doctorStatusFilter, setDoctorStatusFilter] = useState("");
+const [ticketStatusFilter, setTicketStatusFilter] = useState("");
+const [ticketSearch, setTicketSearch] = useState("");
 
   /* ---------------- RENDER: DOCTORS TABLE ---------------- */
   const renderDoctorsTable = () => {
-    const filteredDoctors = doctors.filter((d) => {
-      const matchesSearch =
-        d.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        d.email?.toLowerCase().includes(searchTerm.toLowerCase());
+  const search = searchTerm.toLowerCase();
 
-      const matchesCategory = filterCategory
-        ? (d.selectedCategory?.name || "").toLowerCase() === filterCategory.toLowerCase()
+  const filteredDoctors = doctors.filter((d) => {
+    const name = (d.name || "").toLowerCase();
+    const email = (d.email || "").toLowerCase();
+    const categoryName = (d.selectedCategory?.name || "").toLowerCase();
+    const status = d.isVerified ? "approved" : "pending";
+
+    const matchesSearch =
+      name.includes(search) ||
+      email.includes(search) ||
+      categoryName.includes(search);
+
+    const matchesCategory = filterCategory
+      ? categoryName === filterCategory.toLowerCase()
+      : true;
+
+    const matchesStatus =
+      doctorStatusFilter
+        ? status === doctorStatusFilter.toLowerCase()
         : true;
 
-      return matchesSearch && matchesCategory;
-    });
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
-    return (
+  return (
+    <div>
+      {/* SEARCH + FILTER BAR */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+        <input
+          type="text"
+          placeholder="Search by name/email/category"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            padding: "6px 10px",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+            flex: 2,
+          }}
+        />
+
+        <select
+          value={doctorStatusFilter}
+          onChange={(e) => setDoctorStatusFilter(e.target.value)}
+          style={{
+            padding: "6px 10px",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+            flex: 1,
+          }}
+        >
+          <option value="">All Status</option>
+          <option value="approved">Approved</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+
+      {/* DOCTOR TABLE */}
       <table style={tableStyle}>
         <thead>
           <tr>
@@ -433,6 +482,7 @@ export default function AdminDashboard() {
               <td style={tdStyle}>{d.name}</td>
               <td style={tdStyle}>{d.email}</td>
               <td style={tdStyle}>{d.selectedCategory?.name || "-"}</td>
+
               <td style={tdStyle}>
                 {d.isApproved ? (
                   <span style={{ color: "green", fontWeight: "bold" }}>Approved</span>
@@ -442,40 +492,35 @@ export default function AdminDashboard() {
               </td>
 
               <td style={tdStyle}>
-                {/* Approve - disabled when already approved */}
                 <button
                   onClick={() => approveDoctor(d._id)}
                   disabled={d.isApproved}
                   style={{
                     padding: "6px 10px",
-                    backgroundColor: d.isApproved ? "#ccc" : "#4CAF50",
+                    backgroundColor: d.isverified ? "#ccc" : "#4CAF50",
                     color: "#fff",
                     border: "none",
                     marginRight: "5px",
                     borderRadius: "5px",
-                    cursor: d.isApproved ? "not-allowed" : "pointer",
                   }}
                 >
                   {d.isApproved ? "Approved" : "Approve"}
                 </button>
 
-                {/* Block / Unblock */}
                 <button
                   onClick={() => toggleDoctor(d._id)}
                   style={{
                     padding: "6px 10px",
-                    backgroundColor: d.isApproved ? "#ff9800" : "#4CAF50",
+                    backgroundColor: d.isVerified ? "#ff9800" : "#4CAF50",
                     color: "#fff",
                     border: "none",
                     borderRadius: "5px",
                     marginRight: "5px",
-                    cursor: "pointer",
                   }}
                 >
                   {d.isApproved ? "Block" : "Unblock"}
                 </button>
 
-                {/* Delete */}
                 <button
                   onClick={() => deleteDoctor(d._id)}
                   style={{
@@ -484,7 +529,6 @@ export default function AdminDashboard() {
                     color: "#fff",
                     border: "none",
                     borderRadius: "5px",
-                    cursor: "pointer",
                   }}
                 >
                   Delete
@@ -494,143 +538,178 @@ export default function AdminDashboard() {
           ))}
         </tbody>
       </table>
-    );
-  };
+    </div>
+  );
+};
 
   /* ---------------- RENDER: TICKETS TABLE (with reply) ---------------- */
   const renderTicketsTable = () => {
-    // flatten tickets with reference to owning user so we can reply
-    const allTickets = users.flatMap((u) =>
-      (u.supportTickets || []).map((t) => ({
-        ...t,
-        userId: u._id,
-        userName: u.name,
-        userEmail: u.email,
-      }))
-    );
+  const allTickets = users.flatMap((u) =>
+    (u.supportTickets || []).map((t) => ({
+      ...t,
+      userId: u._id,
+      userName: u.name,
+      userEmail: u.email,
+    }))
+  );
 
-    return (
-      <div>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>User</th>
-              <th style={thStyle}>Subject</th>
-              <th style={thStyle}>Status</th>
-              <th style={thStyle}>Reply</th>
-              <th style={thStyle}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {allTickets.map((t, idx) => {
-              const key = `${t.userId}_${t._id}`;
-              const isOpen = openReplyKey === key;
+  const search = ticketSearch.toLowerCase();
 
-              return (
-                <React.Fragment key={key}>
-                  <tr style={trStyle(idx)}>
-                    <td style={tdStyle}>
-                      <div style={{ fontWeight: "bold" }}>{t.userName}</div>
-                      <div style={{ color: "#666", fontSize: "12px" }}>{t.userEmail}</div>
-                    </td>
+  const filteredTickets = allTickets.filter((t) => {
+    const subject = (t.subject || "").toLowerCase();
+    const user = (t.userName || "").toLowerCase();
+    const email = (t.userEmail || "").toLowerCase();
+    const status = (t.status || "").toLowerCase();
 
-                    <td style={tdStyle}>{t.subject}</td>
+    const matchesSearch =
+      subject.includes(search) ||
+      user.includes(search) ||
+      email.includes(search);
 
-                    <td style={tdStyle}>
-                      <div style={{ fontWeight: "bold" }}>{t.status}</div>
-                      {t.reply && <div style={{ marginTop: "6px", fontSize: "12px" }}>Replied</div>}
-                    </td>
+    const matchesStatus = ticketStatusFilter
+      ? status === ticketStatusFilter.toLowerCase()
+      : true;
 
-                    <td style={tdStyle}>
-                      {t.reply ? (
-                        <div>
-                          <div style={{ fontWeight: "600" }}>Admin Reply:</div>
-                          <div style={{ marginTop: "6px" }}>{t.reply}</div>
-                        </div>
-                      ) : (
-                        <div style={{ color: "#777" }}>No reply</div>
-                      )}
-                    </td>
+    return matchesSearch && matchesStatus;
+  });
 
-                    <td style={tdStyle}>
-                      {/* Toggle reply box */}
-                      <button
-                        onClick={() => toggleReplyBox(t.userId, t._id)}
+  return (
+    <div>
+      {/* SEARCH + FILTER BAR */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+        <input
+          type="text"
+          placeholder="Search tickets (subject/user/email)"
+          value={ticketSearch}
+          onChange={(e) => setTicketSearch(e.target.value)}
+          style={{
+            padding: "6px 10px",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+            flex: 2,
+          }}
+        />
+
+        <select
+          value={ticketStatusFilter}
+          onChange={(e) => setTicketStatusFilter(e.target.value)}
+          style={{
+            padding: "6px 10px",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+            flex: 1,
+          }}
+        >
+          <option value="">All Status</option>
+          <option value="open">Open</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+
+      {/* TICKET TABLE */}
+      <table style={tableStyle}>
+        <thead>
+          <tr>
+            <th style={thStyle}>User</th>
+            <th style={thStyle}>Subject</th>
+            <th style={thStyle}>Status</th>
+            <th style={thStyle}>Reply</th>
+            <th style={thStyle}>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {filteredTickets.map((t, idx) => {
+            const key = `${t.userId}_${t._id}`;
+            const isOpen = openReplyKey === key;
+
+            return (
+              <React.Fragment key={key}>
+                <tr style={trStyle(idx)}>
+                  <td style={tdStyle}>
+                    <b>{t.userName}</b>
+                    <div style={{ fontSize: "12px", color: "#555" }}>
+                      {t.userEmail}
+                    </div>
+                  </td>
+
+                  <td style={tdStyle}>{t.subject}</td>
+                  <td style={tdStyle}>{t.status}</td>
+
+                  <td style={tdStyle}>
+                    {t.reply ? (
+                      <div>{t.reply}</div>
+                    ) : (
+                      <span style={{ color: "#777" }}>No reply</span>
+                    )}
+                  </td>
+
+                  <td style={tdStyle}>
+                    <button
+                      onClick={() => toggleReplyBox(t.userId, t._id)}
+                      style={{
+                        padding: "6px 10px",
+                        backgroundColor: "#4CAF50",
+                        color: "#fff",
+                        borderRadius: "6px",
+                        border: "none",
+                      }}
+                    >
+                      {isOpen ? "Close" : "Reply"}
+                    </button>
+                  </td>
+                </tr>
+
+                {isOpen && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: "10px", background: "#fafafa" }}>
+                      <textarea
+                        rows="3"
+                        value={ticketReplies[key] || ""}
+                        onChange={(e) =>
+                          setReplyText(t.userId, t._id, e.target.value)
+                        }
+                        placeholder="Type reply..."
                         style={{
-                          padding: "6px 10px",
-                          backgroundColor: "#4CAF50",
-                          color: "#fff",
-                          border: "none",
+                          width: "100%",
+                          padding: "10px",
                           borderRadius: "6px",
-                          marginRight: "8px",
-                          cursor: "pointer",
+                          border: "1px solid #ccc",
                         }}
-                      >
-                        {isOpen ? "Close" : "Reply"}
-                      </button>
+                      ></textarea>
+
+                      <div style={{ marginTop: "8px", textAlign: "right" }}>
+                        <button
+                          onClick={() => sendReply(t.userId, t._id)}
+                          style={{
+                            padding: "8px 12px",
+                            backgroundColor: "#4CAF50",
+                            color: "#fff",
+                            borderRadius: "6px",
+                            border: "none",
+                          }}
+                        >
+                          Send Reply & Close
+                        </button>
+                      </div>
                     </td>
                   </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
-                  {/* Reply box row */}
-                  {isOpen && (
-                    <tr>
-                      <td colSpan={5} style={{ padding: "10px 15px", background: "#fafafa" }}>
-                        <textarea
-                          rows={3}
-                          value={ticketReplies[key] || ""}
-                          onChange={(e) => setReplyText(t.userId, t._id, e.target.value)}
-                          placeholder="Type your reply here..."
-                          style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ccc" }}
-                        />
-
-                        <div style={{ marginTop: "8px", display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                          <button
-                            onClick={() => {
-                              setOpenReplyKey(null);
-                            }}
-                            style={{
-                              padding: "8px 12px",
-                              borderRadius: "6px",
-                              border: "1px solid #ccc",
-                              background: "#fff",
-                              cursor: "pointer",
-                            }}
-                          >
-                            Cancel
-                          </button>
-
-                          <button
-                            onClick={() => sendReply(t.userId, t._id)}
-                            style={{
-                              padding: "8px 12px",
-                              borderRadius: "6px",
-                              border: "none",
-                              background: "#4CAF50",
-                              color: "#fff",
-                              cursor: "pointer",
-                            }}
-                          >
-                            Send Reply & Close
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
-
-  /* ---------------- RENDER: CATEGORIES ---------------- */
+  /* ---------------- RENDER: Deparment ---------------- */
   
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: "", description: "" });
 
-  const renderCategories = () => {
+  const renderDeparment = () => {
   const startEdit = (cat, safeId) => {
     setEditingId(safeId);
     setEditForm({
@@ -658,7 +737,7 @@ export default function AdminDashboard() {
 
       const updated = res.data.category;
 
-      setCategories((prev) =>
+      setDeparment((prev) =>
         prev.map((c) =>
           (c._id || c.name) === editingId ? updated : c
         )
@@ -679,7 +758,7 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setCategories((prev) =>
+      setDeparment((prev) =>
         prev.filter((c) => (c._id || c.name) !== id)
       );
     } catch (err) {
@@ -690,10 +769,10 @@ export default function AdminDashboard() {
 
   // SAFE FILTERING
   const uniqueCategoryNames = [
-    ...new Set((categories || []).map((x) => x?.name || ""))
+    ...new Set((Deparment || []).map((x) => x?.name || ""))
   ];
 
-  const filteredCategories = (categories || []).filter((c) => {
+  const filteredDeparment = (Deparment || []).filter((c) => {
     const name = c?.name || "";
     const desc = c?.description || "";
     const search = categorySearch.toLowerCase();
@@ -709,7 +788,7 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h2 style={{ marginBottom: "15px" }}>Categories</h2>
+      <h2 style={{ marginBottom: "15px" }}>Deparment</h2>
 
       {/* ADD SECTION */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
@@ -806,7 +885,7 @@ export default function AdminDashboard() {
         </thead>
 
         <tbody>
-          {filteredCategories.map((c, idx) => {
+          {filteredDeparment.map((c, idx) => {
             const safeId = c._id || c.name || idx;
             const isEditing = editingId === safeId;
 
@@ -938,7 +1017,7 @@ export default function AdminDashboard() {
             {user?.tenantId && <p style={{ fontSize: "13px", color: "#ccc" }}>Tenant: {user?.tenantId}</p>}
           </div>
 
-          {["Dashboard", "Users", "Doctors", "Tickets", "Categories"].map((section) => (
+          {["Dashboard", "Users", "Doctors", "Tickets", "Deparment"].map((section) => (
             <div key={section} style={menuItemStyle(activeSection === section)} onClick={() => handleMenuClick(section)}>
               {section}
             </div>
@@ -960,7 +1039,7 @@ export default function AdminDashboard() {
               <div style={cardStyle}>Users: {stats.users}</div>
               <div style={cardStyle}>Doctors: {stats.doctors}</div>
               <div style={cardStyle}>Tickets: {stats.tickets}</div>
-              <div style={cardStyle}>Categories: {stats.categories}</div>
+              <div style={cardStyle}>Deparment: {stats.Deparment}</div>
             </div>
 
             <h2>Recent Tickets</h2>
@@ -971,7 +1050,7 @@ export default function AdminDashboard() {
         {activeSection === "Users" && renderUsersTable()}
         {activeSection === "Doctors" && renderDoctorsTable()}
         {activeSection === "Tickets" && renderTicketsTable()}
-        {activeSection === "Categories" && renderCategories()}
+        {activeSection === "Deparment" && renderDeparment()}
       </div>
     </div>
   );

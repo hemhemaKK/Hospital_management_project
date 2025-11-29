@@ -8,6 +8,7 @@ const {
 } = require("../controllers/superadminController");
 
 const { requireAuth } = require("../middleware/authMiddleware");
+const { getAllUsersSuperAdmin, getAllDoctorsSuperAdmin } = require("../controllers/adminController");
 
 
 
@@ -16,4 +17,6 @@ router.get("/hospitals", requireAuth, getAllHospitals);
 router.put("/hospitals/:id", requireAuth, updateHospital);
 router.delete("/hospitals/:id", requireAuth, deleteHospital);
 
+router.get("/users", requireAuth, getAllUsersSuperAdmin);
+router.get("/doctors", requireAuth, getAllDoctorsSuperAdmin);
 module.exports = router;

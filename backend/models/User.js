@@ -17,6 +17,59 @@ const ticketSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+
+// ⭐ PRESCRIPTION SCHEMA
+const prescriptionSchema = new mongoose.Schema({
+  medicineName: { type: String, required: true },
+  dosage: { type: String, required: true },
+  duration: { type: String, required: true },
+  notes: { type: String, default: "" },
+  createdAt: { type: Date, default: Date.now }
+});
+
+
+// ⭐ REPORT SCHEMA
+const reportSchema = new mongoose.Schema({
+  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  content: { type: String, default: "" },
+  updatedAt: { type: Date }
+});
+
+
+// ⭐ APPOINTMENT SCHEMA
+const appointmentSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  doctor: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  nurse: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
+  category: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital" },
+  hospital: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital" },
+
+  date: { type: String },
+  time: { type: String },
+  description: { type: String },
+
+  status: {
+    type: String,
+    enum: [
+      "PENDING",
+      "DOCTOR_ACCEPTED",
+      "NURSE_ASSIGNED",
+      "NURSE_COMPLETED",
+      "DOCTOR_COMPLETED",
+      "REJECTED"
+    ],
+    default: "PENDING"
+  },
+
+  report: reportSchema,
+  prescription: [prescriptionSchema],
+
+  createdAt: { type: Date, default: Date.now }
+});
+
+
+
 const userSchema = new mongoose.Schema(
   {
     firstName: { type: String },
@@ -49,7 +102,6 @@ const userSchema = new mongoose.Schema(
       default: "user"
     },
 
-   
     status: {
       type: String,
       enum: ["ACTIVE", "INACTIVE", "LOCKED", "PASSWORD_EXPIRED"],
@@ -57,6 +109,9 @@ const userSchema = new mongoose.Schema(
     },
 
     passwordHistory: [{ type: String }],
+
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
 
     // ⭐ USER SELECTS A HOSPITAL DURING REGISTER
     selectedHospital: {
@@ -69,15 +124,20 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+
     reviews: [reviewSchema],
     hasReviewed: { type: Boolean, default: false },
 
     supportTickets: [ticketSchema],
 
+    // ⭐ DOCTOR / NURSE CATEGORY
     selectedCategory: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Hospital"
-    }
+    },
+
+    // ⭐ ALL APPOINTMENTS CONNECTED TO THIS USER
+    appointments: [appointmentSchema]
   },
   { timestamps: true }
 );

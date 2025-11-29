@@ -48,4 +48,5 @@ router.get("/category", requireAuth, getAllCategories);
 router.put("/category/:id", requireAuth, updateCategory);
 router.delete("/category/:id", requireAuth, deleteCategory);
 
+
 module.exports = router;

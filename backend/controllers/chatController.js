@@ -1,8 +1,6 @@
 // controllers/chatController.js
 import User from "../models/User.js";
 import Complaint from "../models/Complaints.js";
-import Category from "../models/Category.js";
-import SubCategory from "../models/subCategory.js";
 
 /**
  * Chat endpoint: POST /api/chatbot
