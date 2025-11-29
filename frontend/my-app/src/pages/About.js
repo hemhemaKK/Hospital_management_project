@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import Footer from "../components/Footer";
-import Navbar from "../components/Navbar";
+import Footer from "../components/Footer"; // default export
+import Navbar from "../components/Navbar"; // default export
 import { motion } from "framer-motion";
 
 export default function About() {
@@ -13,170 +13,139 @@ export default function About() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const creators = [
-    { name: "Hemavathi K", role: "Full-Stack Developer", img: "/assets/p1.png" },
-    { name: "Noor Jahan", role: "UI/UX Designer", img: "/assets/p2.png" },
-    { name: "Sanjay A", role: "Backend Engineer", img: "/assets/p3.png" },
+  const team = [
+    { name: "Dr. Hemavathi K", role: "Chief Medical Officer", img: "/assets/p1.png" },
+    { name: "Noor Jahan", role: "Hospital Admin", img: "/assets/p2.png" },
+    { name: "Sanjay A", role: "IT & Backend Lead", img: "/assets/p3.png" },
+  ];
+
+  const features = [
+    { title: "🩺 Patient Management", desc: "Streamline patient registration, appointments, and medical records efficiently." },
+    { title: "💳 Billing & Invoicing", desc: "Automate billing processes and manage invoices seamlessly." },
+    { title: "📦 Inventory Control", desc: "Track and manage hospital supplies and medicines in real-time." },
+    { title: "📊 Analytics & Reports", desc: "Generate reports to monitor hospital performance and patient care." },
   ];
 
   return (
     <>
       <Navbar />
 
-      <div style={{ position: "relative", overflow: "hidden" }}>
-        {/* Background Video */}
-        <video
-          autoPlay
-          loop
-          muted
+      <div
+        style={{
+          fontFamily: "Arial, sans-serif",
+          padding: isMobile ? "40px 20px" : "60px 40px",
+          background: "#f9f9f9",
+          color: "#333",
+        }}
+      >
+        {/* Intro Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1 }}
+          style={{ textAlign: "center", marginBottom: isMobile ? "40px" : "60px" }}
+        >
+          <h1
+            style={{
+              fontSize: isMobile ? "2rem" : "3rem",
+              fontWeight: "bold",
+              marginBottom: "20px",
+              color: "#004d53",
+            }}
+          >
+            🏥 About Our Hospital Management System
+          </h1>
+          <p
+            style={{
+              fontSize: isMobile ? "1rem" : "1.2rem",
+              maxWidth: "800px",
+              marginInline: "auto",
+              lineHeight: "1.6",
+              color: "#555",
+            }}
+          >
+            Our <b>Hospital Management System</b> is designed to streamline hospital operations and improve patient care.  
+            From patient registration and appointments to billing, inventory, and analytics, our system provides an efficient, user-friendly platform for medical staff and administrators.  
+            Empower your hospital to deliver faster, smarter, and safer healthcare.
+          </p>
+        </motion.div>
+
+        {/* Core Features Section */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1 }}
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            filter: "blur(8px) brightness(0.5)",
-            zIndex: -2,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "20px",
+            marginBottom: isMobile ? "40px" : "60px",
           }}
         >
-          <source src="/assets/about.mp4" type="video/mp4" />
-        </video>
+          {features.map((feature, i) => (
+            <motion.div
+              key={i}
+              whileHover={{ scale: 1.05 }}
+              style={{
+                padding: "20px",
+                borderRadius: "15px",
+                background: "white",
+                boxShadow: "0px 8px 20px rgba(0,0,0,0.1)",
+                textAlign: "center",
+                color: "#333",
+              }}
+            >
+              <h2 style={{ fontSize: isMobile ? "1.2rem" : "1.5rem", marginBottom: "10px", color: "#00626a" }}>
+                {feature.title}
+              </h2>
+              <p style={{ fontSize: isMobile ? "0.9rem" : "1rem", lineHeight: "1.5" }}>{feature.desc}</p>
+            </motion.div>
+          ))}
+        </motion.div>
 
-        {/* Overlay */}
+        {/* Team Section */}
+        <h2 style={{ textAlign: "center", fontSize: isMobile ? "2rem" : "2.5rem", marginBottom: "30px", color: "#004d53" }}>
+          👨‍⚕️ Meet The Team
+        </h2>
         <div
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0,0,0,0.3)",
-            zIndex: -1,
-          }}
-        />
-
-        {/* Main Content */}
-        <div
-          style={{
-            fontFamily: "Arial, sans-serif",
-            padding: isMobile ? "40px 20px" : "60px 40px",
-            color: "white",
-            position: "relative",
-            zIndex: 1,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "20px",
+            maxWidth: "1000px",
+            margin: "auto",
           }}
         >
-          {/* Intro Section */}
-          <motion.div
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
-            style={{
-              textAlign: "center",
-              marginBottom: isMobile ? "40px" : "60px",
-            }}
-          >
-            <h1
+          {team.map((member, i) => (
+            <motion.div
+              key={i}
+              whileHover={{ scale: 1.08, rotate: 1 }}
+              transition={{ type: "spring", stiffness: 200 }}
               style={{
-                fontSize: isMobile ? "2rem" : "3rem",
-                fontWeight: "bold",
-                marginBottom: "20px",
+                padding: "20px",
+                borderRadius: "20px",
+                background: "white",
+                boxShadow: "0px 10px 25px rgba(0,0,0,0.1)",
+                textAlign: "center",
+                color: "#333",
               }}
             >
-              🌆 About “Making My City Good”
-            </h1>
-            <p
-              style={{
-                fontSize: isMobile ? "1rem" : "1.2rem",
-                maxWidth: "800px",
-                marginInline: "auto",
-                lineHeight: "1.6",
-              }}
-            >
-              <b>Making My City Good</b> is a citizen-driven initiative designed to build smarter, cleaner, and more connected cities.  
-              Our mission is to give every resident a voice — to report issues, share ideas, and take part in improving urban life.  
-              Through technology and community collaboration, we aim to turn every complaint into constructive change 🌱.
-            </p>
-          </motion.div>
-
-          {/* Core Features Section */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1 }}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: "20px",
-              marginBottom: isMobile ? "40px" : "60px",
-            }}
-          >
-            {[
-              { title: "📢 Citizen Voice", desc: "Report local issues like waste, road damage, or safety concerns instantly." },
-              { title: "🏙️ Smart Governance", desc: "Bridge the gap between citizens and municipal bodies through digital tools." },
-              { title: "🤝 Community Action", desc: "Encourage teamwork among residents for cleanup, volunteering, and civic improvement." },
-              { title: "🌿 Sustainable Growth", desc: "Promote eco-friendly habits and long-term urban sustainability." },
-            ].map((benefit, i) => (
-              <motion.div
-                key={i}
-                whileHover={{ scale: 1.05 }}
+              <img
+                src={member.img}
+                alt={member.name}
                 style={{
-                  padding: "20px",
-                  borderRadius: "15px",
-                  background: "rgba(255, 255, 255, 0.95)",
-                  boxShadow: "0px 8px 20px rgba(0,0,0,0.2)",
-                  textAlign: "center",
-                  color: "black",
+                  width: "120px",
+                  height: "120px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  marginBottom: "15px",
+                  border: "3px solid #00626a",
                 }}
-              >
-                <h2 style={{ fontSize: isMobile ? "1.2rem" : "1.5rem", marginBottom: "10px" }}>{benefit.title}</h2>
-                <p style={{ fontSize: isMobile ? "0.9rem" : "1rem", lineHeight: "1.5" }}>{benefit.desc}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Team Section */}
-          <h2 style={{ textAlign: "center", fontSize: isMobile ? "2rem" : "2.5rem", marginBottom: "30px" }}>👩‍💻 Meet The Team</h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "20px",
-              maxWidth: "1000px",
-              margin: "auto",
-            }}
-          >
-            {creators.map((creator, i) => (
-              <motion.div
-                key={i}
-                whileHover={{ scale: 1.08, rotate: 1 }}
-                transition={{ type: "spring", stiffness: 200 }}
-                style={{
-                  padding: "20px",
-                  borderRadius: "20px",
-                  background: "rgba(0,0,0,0.6)",
-                  boxShadow: "0px 10px 25px rgba(255, 255, 255, 0.1)",
-                  textAlign: "center",
-                  color: "white",
-                }}
-              >
-                <img
-                  src={creator.img}
-                  alt={creator.name}
-                  style={{
-                    width: "120px",
-                    height: "120px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    marginBottom: "15px",
-                    border: "3px solid gray",
-                  }}
-                />
-                <h3 style={{ fontSize: isMobile ? "1.2rem" : "1.5rem" }}>{creator.name}</h3>
-                <p style={{ fontSize: isMobile ? "0.9rem" : "1rem", opacity: "0.9" }}>{creator.role}</p>
-              </motion.div>
-            ))}
-          </div>
+              />
+              <h3 style={{ fontSize: isMobile ? "1.2rem" : "1.5rem" }}>{member.name}</h3>
+              <p style={{ fontSize: isMobile ? "0.9rem" : "1rem", opacity: "0.9" }}>{member.role}</p>
+            </motion.div>
+          ))}
         </div>
       </div>
 

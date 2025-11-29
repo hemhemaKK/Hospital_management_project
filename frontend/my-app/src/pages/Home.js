@@ -15,33 +15,32 @@ export default function Home() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // defaultReviews and fetch logic stays the same
   const defaultReviews = [
     {
       name: "Aarav",
-      title: "Clean Streets Initiative",
-      comment: "I reported garbage near my area and it was cleared in 2 days. Great platform!",
+      title: "Quick Care",
+      comment: "Booked an appointment in minutes and the doctor was ready on time. Very efficient!",
       rating: 5,
       image: "https://i.pravatar.cc/150?img=1",
     },
     {
       name: "Meera",
-      title: "Quick Response",
-      comment: "The municipality acted fast after I raised a streetlight complaint!",
+      title: "Seamless Experience",
+      comment: "The system made it easy to download prescriptions and test reports.",
       rating: 4,
       image: "https://i.pravatar.cc/150?img=2",
     },
     {
       name: "Ravi",
-      title: "Transparent System",
-      comment: "Loved being able to track complaint status and see updates in real time.",
+      title: "Great Support",
+      comment: "Hospital admin resolved a scheduling conflict quickly. Highly recommend.",
       rating: 5,
       image: "https://i.pravatar.cc/150?img=3",
     },
     {
       name: "Liya",
-      title: "Very Helpful App",
-      comment: "Easy to report civic issues without visiting the office.",
+      title: "User Friendly",
+      comment: "Nurses updated vitals in real-time — loved the live dashboard.",
       rating: 5,
       image: "https://i.pravatar.cc/150?img=4",
     },
@@ -51,355 +50,314 @@ export default function Home() {
     const fetchReviews = async () => {
       try {
         const res = await axios.get("http://localhost:5000/api/review");
+
         if (res.data.reviews && res.data.reviews.length > 0) {
           const mapped = res.data.reviews.map((r) => ({
             name: r.name || "User",
-            title: r.title || "Citizen Feedback",
+            title: r.title || "Patient Feedback",
             comment: r.comment,
             rating: r.rating,
             image: r.image || "https://i.pravatar.cc/150?img=7",
           }));
+
           setReviews([...defaultReviews, ...mapped]);
         } else {
           setReviews(defaultReviews);
         }
-      } catch (err) {
-        console.error("Failed to fetch reviews:", err);
+      } catch {
         setReviews(defaultReviews);
       }
     };
+
     fetchReviews();
   }, []);
 
   return (
-    <div style={{ width: "100vw", overflowX: "hidden", fontFamily: "Arial, sans-serif" }}>
+    <div style={{ width: "100vw", overflowX: "hidden", fontFamily: "Inter, sans-serif" }}>
       <Navbar />
 
-      {/* Video Background */}
-      <div style={{ position: "relative", height: isMobile ? "50vh" : "75vh", overflow: "hidden" }}>
-        <video
-          autoPlay
-          loop
-          muted
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            zIndex: -1,
-          }}
-        >
-          <source src="/assets/home.mp4" type="video/mp4" />
-          Your browser does not support HTML5 video.
-        </video>
-
-        {/* Hero Section */}
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            textAlign: "center",
-            color: "white",
-            width: isMobile ? "90%" : "60%",
-            maxWidth: isMobile ? "95%" : "700px",
-            padding: isMobile ? "1rem" : "2rem",
-            borderRadius: "20px",
-            backgroundColor: "rgba(0,0,0,0.6)",
-            boxShadow: "0 8px 25px rgba(255, 255, 255, 0.5)",
-          }}
-        >
-          <h1 style={{ fontSize: isMobile ? "1.8rem" : "3rem", marginBottom: "1rem" }}>
-            Welcome to Improve My City
-          </h1>
-          <p style={{ fontSize: isMobile ? "1rem" : "1.3rem", maxWidth: "600px", margin: "0 auto" }}>
-            Empower citizens to report civic issues like potholes, garbage, or streetlight failures — and track them until resolved.
-          </p>
-        </div>
-      </div>
-
-      {/* Rest of the page remains the same */}
-      
-      {/* Services */}
-      <h1
-        style={{
-          fontWeight: "bold",
-          textAlign: "center",
-          marginBottom: "-10px",
-          marginTop: "40px",
-          padding: "20px",
-        }}
-      >
-        What You Can Do
-      </h1>
+      {/* ---------------------------- HERO SECTION ---------------------------- */}
       <div
         style={{
           display: "flex",
-          flexWrap: "wrap",
           justifyContent: "center",
-          padding: "2rem",
-          backgroundColor: "#d3d3d3",
+          alignItems: "center",
+          padding: isMobile ? "2rem 1rem" : "5rem 2rem",
+          background: "linear-gradient(135deg,#e0f7fa,#ffffff,#b2ebf2)",
+          flexWrap: "wrap",
+          flexDirection: isMobile ? "column" : "row", // ✅ stack on mobile
+          animation: "fadeIn 1.3s ease",
         }}
       >
-        {[
-          "Report Civic Issues",
-          "Track Complaint Progress",
-          "View Resolved Problems",
-          "Connect with Local Authorities",
-        ].map((title, i) => (
-          <div
-            key={i}
-            style={{
-              backgroundColor: "white",
-              borderRadius: "15px",
-              padding: "2rem",
-              margin: "1rem",
-              minWidth: "250px",
-              flex: "1 1 250px",
-              boxShadow: "0 4px 15px rgba(0,0,0,0.5)",
-              transition: "transform 0.3s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-10px)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
-          >
-            <h3 style={{ marginBottom: "1rem", color: "#333" }}>{title}</h3>
-            <p style={{ color: "#555" }}>
-              Helping citizens and authorities connect to make cities cleaner, safer, and more efficient.
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Image Gallery + Benefits */}
-<div
-  style={{
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "stretch",
-    justifyContent: "center",
-    padding: "3rem 2rem",
-    gap: "2rem",
-    backgroundColor: "#f9fafb",
-  }}
->
-  {/* Left: Gallery Section */}
-  <div
-    className="gallery-section"
-    style={{
-      flex: "2",
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-      gap: "20px",
-      width: "100%",
-    }}
-  >
-    {[
-      "/assets/1.png",
-      "/assets/2.png",
-      "/assets/3.png",
-      "/assets/5.png",
-      "/assets/4.png",
-    ].map((src, i) => (
-      <div
-        key={i}
-        style={{
-          overflow: "hidden",
-          borderRadius: "12px",
-          height: "220px",
-          boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-          background: "#fff",
-          transition: "transform 0.3s ease, box-shadow 0.3s ease",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-5px)";
-          e.currentTarget.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.15)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.1)";
-        }}
-      >
-        <img
-          src={src}
-          alt={`Gallery ${i + 1}`}
+        {/* Left Content */}
+        <div
           style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            transition: "transform 0.5s ease",
+            flex: 1,
+            minWidth: "300px",
+            maxWidth: "500px",
+            padding: "1rem",
+            animation: "slideLeft 1.2s ease",
+            textAlign: isMobile ? "center" : "left",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.08)")}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-        />
+        >
+          <h1
+            style={{
+              fontSize: isMobile ? "2rem" : "3.5rem",
+              fontWeight: "800",
+              color: "#004d53",
+              lineHeight: "1.2",
+            }}
+          >
+            HOSPITAL <br /> MANAGEMENT <br /> SYSTEM
+          </h1>
+
+          <p
+            style={{
+              color: "#555",
+              fontSize: isMobile ? "1rem" : "1.1rem",
+              marginTop: "1rem",
+              marginBottom: "2rem",
+            }}
+          >
+            A comprehensive solution for efficient hospital operations and improved patient care.
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "1rem",
+              justifyContent: isMobile ? "center" : "flex-start",
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              style={{
+                padding: "0.9rem 1.8rem",
+                background: "linear-gradient(135deg,#00626a,#0097a7)",
+                border: "none",
+                borderRadius: "10px",
+                color: "white",
+                fontWeight: "bold",
+                cursor: "pointer",
+                transition: "0.3s",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              }}
+              onMouseEnter={(e) => (e.target.style.transform = "scale(1.08)")}
+              onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
+            >
+              GET STARTED
+            </button>
+
+            <button
+              style={{
+                padding: "0.9rem 1.8rem",
+                border: "2px solid #00626a",
+                background: "white",
+                borderRadius: "10px",
+                color: "#00626a",
+                fontWeight: "bold",
+                cursor: "pointer",
+                transition: "0.3s",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = "#e0f2f1";
+                e.target.style.transform = "scale(1.07)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = "white";
+                e.target.style.transform = "scale(1)";
+              }}
+            >
+              CONTACT US
+            </button>
+          </div>
+        </div>
+
+        {/* Right Image */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            justifyContent: "center",
+            animation: "slideRight 1.2s ease",
+            marginTop: isMobile ? "1rem" : "0",
+            width: "100%",
+          }}
+        >
+          <img
+            src="/assets/hero.png"
+            style={{
+              width: isMobile ? "80%" : "100%",
+              maxWidth: "450px",
+              height: "auto",
+              objectFit: "contain",
+              filter: "drop-shadow(0px 8px 20px rgba(0,0,0,0.15))",
+            }}
+          />
+        </div>
       </div>
-    ))}
-  </div>
-  {/* Right: Benefits */}
- <div
-  className="benefits-section"
-  style={{
-    flex: "1",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    padding: "2rem",
-    gap: "1rem",
-    background: "#e5e4e4",
-    borderRadius: "10px",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-  }}
->
-  <h2
-    style={{
-      fontWeight: "bold",
-      fontSize: "1.8rem",
-      textAlign: "center",
-      color: "#333",
-    }}
-  >
-    Why Use <span style={{ color: "#FB6F92" }}>Improve My City?</span>
-  </h2>
 
-  <div
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: "0.75rem",
-      fontSize: "1.05rem",
-      color: "#444",
-      lineHeight: "1.6",
-    }}
-  >
-    <p>📍 Report problems directly with photos and location.</p>
-    <p>🔔 Receive updates when authorities take action.</p>
-    <p>👀 See resolved issues near your neighborhood.</p>
-    <p>🤝 Build a cleaner, better, more transparent community.</p>
-    <p>🌟 Trusted by thousands of responsible citizens!</p>
-  </div>
+      {/* ---------------------------- FEATURES SECTION ---------------------------- */}
+      <div
+        style={{
+          padding: "3rem 1rem",
+          background: "#ffffff",
+          textAlign: "center",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: isMobile ? "1.5rem" : "2.2rem",
+            color: "#004d53",
+            marginBottom: "2rem",
+          }}
+        >
+          Powerful Features for Modern Hospitals
+        </h2>
 
-  {/* Responsive styles */}
-  <style>
-    {`
-      @media (max-width: 768px) {
-        .benefits-section {
-          padding: 1.5rem;
-          text-align: center;
-        }
-        .benefits-section h2 {
-          font-size: 1.5rem;
-        }
-        .benefits-section p {
-          font-size: 0.95rem;
-        }
-      }
-
-      @media (max-width: 480px) {
-        .benefits-section {
-          padding: 1rem;
-          border-radius: 8px;
-        }
-        .benefits-section h2 {
-          font-size: 1.3rem;
-        }
-        .benefits-section p {
-          font-size: 0.9rem;
-          line-height: 1.5;
-        }
-      }
-    `}
-  </style>
-</div>
-
-
-  {/* Responsive Style */}
-  <style>
-    {`
-      @media (max-width: 900px) {
-        .gallery-section {
-          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-        }
-      }
-
-      @media (max-width: 768px) {
-        .gallery-section, .benefits-section {
-          flex: 1 1 100%;
-        }
-        .benefits-section {
-          order: 2;
-          margin-top: 1rem;
-        }
-      }
-
-      @media (max-width: 480px) {
-        .gallery-section {
-          grid-template-columns: repeat(1, 1fr);
-        }
-      }
-    `}
-  </style>
-</div>
-
-
-      {/* Testimonials */}
-      <h1 style={{ textAlign: "center", fontWeight: "bold", marginTop: "60px", marginBottom: "20px" }}>
-        Citizens’ Voices
-      </h1>
-      <div style={{ overflow: "hidden", padding: "2rem 0", backgroundColor: "#b6b6b6" }}>
-        <div style={{ display: "flex", animation: "scrollCards 30s linear infinite" }}>
-          {reviews.map((t, i) => (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            flexWrap: "wrap",
+            gap: "2rem",
+          }}
+        >
+          {[
+            {
+              title: "Patient Management",
+              text: "Streamline patient registration, appointments, and records.",
+              icon: "👨‍⚕️",
+            },
+            {
+              title: "Billing & Invoicing",
+              text: "Automate billing processes and manage invoices seamlessly.",
+              icon: "💳",
+            },
+            {
+              title: "Inventory Control",
+              text: "Track and manage hospital supplies with ease.",
+              icon: "📦",
+            },
+          ].map((item, i) => (
             <div
               key={i}
               style={{
-                backgroundColor: "white",
+                background: "rgba(255, 255, 255, 0.75)",
+                backdropFilter: "blur(10px)",
+                padding: "2rem",
+                width: "300px",
                 borderRadius: "15px",
-                padding: "1rem",
-                margin: "0 1rem",
-                minWidth: "250px",
-                maxWidth: "250px",
-                boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-                textAlign: "center",
+                boxShadow: "0 6px 15px rgba(0,0,0,0.1)",
+                transition: "0.4s",
+                animation: "fadeInUp 1.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-10px)";
+                e.currentTarget.style.boxShadow = "0 10px 25px rgba(0,0,0,0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 6px 15px rgba(0,0,0,0.1)";
               }}
             >
-              <img
-                src={t.image}
-                alt={t.name}
-                style={{
-                  width: "80px",
-                  height: "80px",
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                  marginBottom: "0.5rem",
-                }}
-              />
-              <h3 style={{ margin: "0.5rem 0" }}>{t.name}</h3>
-              <h4 style={{ margin: "0.3rem 0", fontStyle: "italic", color: "#555" }}>{t.title}</h4>
-              <div style={{ color: "#FFD700", marginBottom: "0.5rem" }}>
-                {[...Array(t.rating)].map((_, i) => (
-                  <FaStar key={i} />
-                ))}
-              </div>
-              <p style={{ fontSize: "0.9rem", color: "#555" }}>{t.comment}</p>
+              <div style={{ fontSize: "3rem" }}>{item.icon}</div>
+              <h3 style={{ color: "#00626a", marginTop: "1rem" }}>{item.title}</h3>
+              <p style={{ color: "#555", marginTop: "0.5rem" }}>{item.text}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Animation Style */}
-      <style>
-        {`
-          @keyframes scrollCards {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-        `}
-      </style>
+      {/* --------------------------- TESTIMONIALS --------------------------- */}
+      <h1
+        style={{
+          textAlign: "center",
+          fontSize: isMobile ? "1.6rem" : "2.2rem",
+          marginTop: "50px",
+          color: "#00626a",
+        }}
+      >
+        See Features from Our Users
+      </h1>
+
+      <div
+        style={{
+          overflow: "hidden",
+          padding: "2rem 0",
+          background: "linear-gradient(to right,#e0f7fa,#b2ebf2,#e0f7fa)",
+          position: "relative",
+        }}
+      >
+        <div style={{ display: "flex", animation: "scroll 25s linear infinite" }}>
+          {reviews.map((t, i) => (
+            <div
+              key={i}
+              style={{
+                background: "white",
+                padding: "1.2rem",
+                borderRadius: "15px",
+                margin: "0 1rem",
+                minWidth: "260px",
+                maxWidth: "260px",
+                textAlign: "center",
+                boxShadow: "0 6px 15px rgba(0,0,0,0.1)",
+                transition: "0.3s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            >
+              <img
+                src={t.image}
+                style={{
+                  width: "70px",
+                  height: "70px",
+                  borderRadius: "50%",
+                  marginBottom: "0.7rem",
+                }}
+              />
+              <h3 style={{ color: "#00626a" }}>{t.name}</h3>
+              <h4 style={{ color: "#555", fontStyle: "italic" }}>{t.title}</h4>
+              <div style={{ color: "#FFD700", margin: "0.3rem 0" }}>
+                {[...Array(t.rating)].map((_, idx) => (
+                  <FaStar key={idx} />
+                ))}
+              </div>
+              <p style={{ color: "#444" }}>{t.comment}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ---------------------------- ANIMATIONS ---------------------------- */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(40px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideLeft {
+          from { opacity: 0; transform: translateX(-40px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideRight {
+          from { opacity: 0; transform: translateX(40px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
 
       <Footer />
     </div>
   );
 }
-
-  

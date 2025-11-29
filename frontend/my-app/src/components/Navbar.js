@@ -18,12 +18,12 @@ export default function Navbar() {
   const HoverLink = ({ to, children }) => {
     const [hover, setHover] = useState(false);
     const style = {
-      color: "black",
+      color: "#004d52",
       marginLeft: isMobile ? "0" : "1rem",
       textDecoration: "none",
       fontSize: "16px",
       fontWeight: "bold",
-      backgroundColor: "#fbfbfbff",
+      backgroundColor: "#b2ebf2",
       padding: "6px 12px",
       borderRadius: "5px",
       boxShadow: hover
@@ -48,11 +48,11 @@ export default function Navbar() {
     );
   };
 
-  // Simple link (no button style)
+  // Simple link (normal nav links)
   const SimpleLink = ({ to, children }) => {
     const [hover, setHover] = useState(false);
     const style = {
-      color: hover ? "#a2a2a2ff" : "white",
+      color: hover ? "#b2ebf2" : "white",
       marginLeft: isMobile ? "0" : "2rem",
       textDecoration: hover ? "underline" : "none",
       fontSize: "18px",
@@ -81,7 +81,7 @@ export default function Navbar() {
     top: "70px",
     left: 0,
     width: "100%",
-    backgroundColor: "#090909dd",
+    backgroundColor: "#00626aee",
     padding: "1rem 0",
     boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
     zIndex: 1000,
@@ -92,7 +92,7 @@ export default function Navbar() {
     <nav style={navStyle}>
       <Link to="/">
         <img
-          src="/assets/logo.png"
+          src="/assets/image.png"
           alt="Making My City Good Logo"
           style={{
             height: "60px",
@@ -135,7 +135,7 @@ const navStyle = {
   justifyContent: "space-between",
   alignItems: "center",
   padding: "0.5rem 3rem",
-  backgroundColor: "#000000ff",
+  backgroundColor: "#00838f", // updated teal background
   position: "relative",
   zIndex: 999,
 };

@@ -17,6 +17,8 @@ const complaintsRoutes = require("./routes/complaintRoutes")
 const chatbotRoutes = require("./routes/chatRoutes")
 const superadminRoutes = require("./routes/superadminRoutes")
 const hospitalRoutes = require("./routes/hospitalRoutes");
+const passwordRoutes = require("./routes/passwordRoutes");
+const nurseRoutes = require("./routes/nurseRoutes");
 
 const app = express();
 
@@ -51,7 +53,9 @@ app.use("/api/chatbot", chatbotRoutes);
 
 app.use("/api/superadmin", superadminRoutes)
 app.use("/api/hospital", hospitalRoutes);
+app.use("/api/password", passwordRoutes);
 
+app.use("/api/nurse", nurseRoutes);
 
 // Root route
 app.get("/", (req, res) => {

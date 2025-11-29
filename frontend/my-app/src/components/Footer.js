@@ -19,14 +19,14 @@ export default function Footer() {
     flexWrap: "wrap",
     gap: isMobile ? "15px" : "20px",
     flexDirection: isMobile ? "column" : "row",
-    alignItems: "stretch", // 🔹 Ensures all columns have equal height
+    alignItems: "stretch",
     width: "100%",
   };
 
   const footerColumn = {
     flex: "1",
     minWidth: isMobile ? "90%" : "220px",
-    background: "white",
+    background: "#b2ebf2", // UPDATED: light cyan background
     padding: isMobile ? "15px" : "20px",
     borderRadius: "10px",
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
@@ -34,6 +34,7 @@ export default function Footer() {
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
+    color: "#004d52", // dark teal text
   };
 
   const socialContainer = {
@@ -117,8 +118,8 @@ export default function Footer() {
 
 // Base Styles
 const footerStyle = {
-  backgroundColor: "#bab9b9ff",
-  color: "#000",
+  backgroundColor: "#00838f", // dark teal background
+  color: "rgba(0, 77, 82, 1)",
   padding: "2rem 1.5rem",
   marginTop: "3rem",
   boxShadow: "0 -2px 10px rgba(0,0,0,0.1)",
@@ -128,19 +129,19 @@ const footerHeading = {
   fontSize: "18px",
   fontWeight: "bold",
   marginBottom: "0.8rem",
-  color: "#333",
+  color: "#004d52",
 };
 
 const footerLink = {
   display: "block",
-  color: "#000",
+  color: "#004d52",
   textDecoration: "none",
   marginBottom: "0.5rem",
   transition: "color 0.3s",
 };
 
 const socialIcon = {
-  color: "#000",
+  color: "#004d52",
   fontSize: "22px",
   transition: "transform 0.3s, color 0.3s",
   textDecoration: "none",
@@ -151,4 +152,5 @@ const footerCopy = {
   textAlign: "center",
   marginTop: "1.5rem",
   fontSize: "14px",
+  color: "#b2ebf2",
 };
