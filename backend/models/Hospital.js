@@ -10,14 +10,19 @@ const hospitalSchema = new mongoose.Schema(
     phone: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     licenseNumber: { type: String, unique: true, required: true },
+    profilePic: { type: String },
+    location: {
+      lat: { type: Number },
+      lng: { type: Number }
+    },
     categories: [
-  {
-    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
-    name: { type: String, required: true },
-    description: { type: String },
-    createdAt: { type: Date, default: Date.now }
-  }
-],
+      {
+        _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+        name: { type: String, required: true },
+        description: { type: String },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ],
 
     // NEW FIELDS (FOR LOGIN)
     hospitalName: { type: String, unique: true },
@@ -35,6 +40,11 @@ const hospitalSchema = new mongoose.Schema(
       enum: ["PENDING", "VERIFIED", "ACTIVE", "SUSPENDED", "INACTIVE"],
       default: "PENDING",
     },
+
+    // Forget and Reset Pass
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
+
 
     createdAt: { type: Date, default: Date.now }
   },

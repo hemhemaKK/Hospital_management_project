@@ -1,6 +1,9 @@
 import User from "../models/User.js";
 import Hospital from "../models/Hospital.js";  // IMPORTANT
 
+
+const isSuperAdmin = (role) => role === "superadmin";
+
 /**
  * ============================
  *  GET ALL USERS (TENANT-FILTERED)
@@ -348,5 +351,62 @@ export const replyToTicket = async (req, res) => {
 
   } catch (err) {
     return res.status(500).json({ message: err.message });
+  }
+};
+
+
+/**
+ * GET ALL USERS (NO TENANT FILTER)
+ */
+export const getAllUsersSuperAdmin = async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user.role))
+      return res.status(403).json({ message: "Only superadmin allowed" });
+
+    const users = await User.find().select("-password -otp -__v");
+
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * GET ALL DOCTORS (NO TENANT FILTER)
+ */
+export const getAllDoctorsSuperAdmin = async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user.role))
+      return res.status(403).json({ message: "Only superadmin allowed" });
+
+    const doctors = await User.find({ role: "doctor" })
+      .select("-password -otp")
+      .populate("selectedCategory", "name");
+
+    res.json(doctors);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * GET ALL HOSPITALS + USERS UNDER THEM
+ */
+export const getAllHospitalsSuperAdmin = async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user.role))
+      return res.status(403).json({ message: "Only superadmin allowed" });
+
+    const hospitals = await Hospital.find().lean();
+
+    for (let h of hospitals) {
+      h.users = await User.find({
+        selectedHospitalTenantId: h.tenantId
+      }).select("name email role isApproved");
+    }
+
+    res.json({ hospitals });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

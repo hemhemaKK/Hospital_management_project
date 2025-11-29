@@ -11,6 +11,8 @@ import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import NurseDashboard from "./pages/NurseDashboard";
 import DoctorDashboard from "./pages/doctorDashboard";
 import GoogleCallback from "./pages/GoogleCallback";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 function App() {
   return (
@@ -31,6 +33,9 @@ function App() {
         <Route path="/profile" element={<ProfileSettings />} />
 
         <Route path="/google-callback" element={<GoogleCallback />} />
+
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
       </Routes>
     </Router>
   );

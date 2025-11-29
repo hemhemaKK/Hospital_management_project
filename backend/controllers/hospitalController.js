@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const Hospital = require("../models/Hospital");
 const sgMail = require("@sendgrid/mail");
+const cloudinary = require("../config/cloudinary");
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
@@ -25,6 +26,7 @@ exports.createHospital = async (req, res) => {
       email,
       licenseNumber,
       password,
+      location
     } = req.body;
 
     // Validate fields
@@ -59,12 +61,29 @@ exports.createHospital = async (req, res) => {
       return res.status(400).json({ msg: "License number already exists" });
     }
 
+    // ⭐ CLOUDINARY UPLOAD
+    let profilePicUrl = null;
+
+    if (req.file) {
+      const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+        folder: "hospital_management",
+      });
+      profilePicUrl = uploadResult.secure_url;
+    }
+
     // Generate metadata
     const tenantId = "tenant-" + Math.floor(Math.random() * 100000);
     const name = `${firstName} ${lastName}`;
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Parse location if exists
+    let parsedLocation = null;
+    if (location) {
+      parsedLocation = JSON.parse(location);
+    }
+
 
     // Save hospital
     const newHospital = new Hospital({
@@ -82,6 +101,8 @@ exports.createHospital = async (req, res) => {
       role: "admin",
       isHospital: false,   // Wait for superadmin approval
       status: "PENDING",
+      profilePic: profilePicUrl,
+      location: parsedLocation
     });
 
     await newHospital.save();
@@ -90,6 +111,7 @@ exports.createHospital = async (req, res) => {
       msg: "Hospital registration submitted. Awaiting approval.",
       hospitalId: newHospital._id,
       tenantId: newHospital.tenantId,
+      profilePic: profilePicUrl
     });
 
   } catch (err) {

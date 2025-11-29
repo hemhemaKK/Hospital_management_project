@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
+// SuperAdminDashboard.jsx
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -10,506 +11,621 @@ export default function SuperAdminDashboard() {
 
   const [activeSection, setActiveSection] = useState("Dashboard");
 
-  /** ADMIN STATES */
-  const [admins, setAdmins] = useState([]);
-  const [stats, setStats] = useState({ admins: 0, hospitals: 0 });
-  const [newAdmin, setNewAdmin] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
+  // data
+  const [doctorsCounts, setDoctorsCount] = useState(0);
+  const [hospitals, setHospitals] = useState([]); // array of hospital objects (with categories)
+  const [users, setUsers] = useState([]); // all users across hospitals
+  const [stats, setStats] = useState({ admins: 0, hospitals: 0, users: 0 });
+
+  // UI
   const [searchTerm, setSearchTerm] = useState("");
-
-  /** HOSPITAL STATES */
-  const [hospitals, setHospitals] = useState([]);
-
-  // ------------------------------
-  // FETCH ADMINS
-  // ------------------------------
-  const fetchAdmins = useCallback(async () => {
-    if (!token) return;
-
-    try {
-      const res = await axios.get(`${BASE_URL}/api/superadmin/admins`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setAdmins(res.data);
-      setStats((prev) => ({ ...prev, admins: res.data.length }));
-    } catch (err) {
-      console.error("Admin fetch failed:", err);
-    }
-  }, [token]);
-
-  // ------------------------------
-  // FETCH HOSPITALS
-  // ------------------------------
+  const [expandedHospitals, setExpandedHospitals] = useState({}); // mapping tenantId => bool
+  const [loading, setLoading] = useState(true);
+  const [creatingAdmin, setCreatingAdmin] = useState({ name: "", email: "", password: "" });
+  const [expandedId, setExpandedId] = useState(null);
+  // fetch hospitals (with full info) for superadmin
   const fetchHospitals = useCallback(async () => {
     if (!token) return;
-
     try {
       const res = await axios.get(`${BASE_URL}/api/superadmin/hospitals`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      setHospitals(res.data.hospitals);
-      setStats((prev) => ({ ...prev, hospitals: res.data.hospitals.length }));
+      // Expecting { hospitals: [...] } or an array
+      const data = res.data?.hospitals ?? res.data ?? [];
+      setHospitals(Array.isArray(data) ? data : []);
+      setStats((s) => ({ ...s, hospitals: (Array.isArray(data) ? data.length : 0) }));
     } catch (err) {
-      console.error("Hospital fetch failed:", err);
+      console.error("fetchHospitals error:", err);
+      // keep app usable
+      setHospitals([]);
     }
   }, [token]);
 
-  // ------------------------------
-  // LOAD DATA ON PAGE LOAD
-  // ------------------------------
+  // fetch all users (superadmin: all users across tenants)
+  const fetchAllUsers = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get(`${BASE_URL}/api/superadmin/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = res.data ?? [];
+      setUsers(Array.isArray(data) ? data : []);
+      setStats((s) => ({ ...s, users: Array.isArray(data) ? data.length : 0 }));
+    } catch (err) {
+      console.error("fetchAllUsers error:", err);
+      setUsers([]);
+    }
+  }, [token]);
+
+  // fetch admin count (or just reuse users filter)
+  const fetchAdminCount = useCallback(async () => {
+    if (!token) return;
+    try {
+      // endpoint expecting admins list
+      const res = await axios.get(`${BASE_URL}/api/superadmin/doctors`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = res.data ?? [];
+      setDoctorsCount
+      (Array.isArray(data) ? data.length : 0);
+      setStats((s) => ({ ...s, admins: Array.isArray(data) ? data.length : 0 }));
+    } catch (err) {
+      console.error("fetchAdminCount error:", err);
+      setDoctorsCount
+      (0);
+    }
+  }, [token]);
+
+  // initial load
   useEffect(() => {
     if (!token) {
       navigate("/login");
       return;
     }
-    fetchAdmins();
-    fetchHospitals();
-  }, [token, fetchAdmins, fetchHospitals, navigate]);
+    setLoading(true);
+    Promise.allSettled([fetchHospitals(), fetchAllUsers(), fetchAdminCount()]).finally(() =>
+      setLoading(false)
+    );
+  }, [token, fetchHospitals, fetchAllUsers, fetchAdminCount, navigate]);
 
-  // ------------------------------
-  // LOGOUT
-  // ------------------------------
+  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/login");
   };
 
-  // ------------------------------
-  // CREATE ADMIN
-  // ------------------------------
-  const handleCreateAdmin = async () => {
-    if (!newAdmin.name || !newAdmin.email || !newAdmin.password)
-      return alert("All fields are required!");
-
-    try {
-      await axios.post(`${BASE_URL}/api/superadmin/admins`, newAdmin, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      alert("Admin created successfully!");
-      fetchAdmins();
-      setNewAdmin({ name: "", email: "", password: "" });
-    } catch (err) {
-      alert("Failed to create admin");
-    }
-  };
-
-  // ------------------------------
-  // UPDATE ADMIN
-  // ------------------------------
-  const handleUpdateAdmin = async (admin) => {
-    const newName = prompt("New admin name:", admin.name);
-    const newEmail = prompt("New admin email:", admin.email);
-
-    if (!newName || !newEmail) return;
-
-    try {
-      await axios.put(
-        `${BASE_URL}/api/superadmin/admins/${admin._id}`,
-        { name: newName, email: newEmail },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      alert("Admin updated!");
-      fetchAdmins();
-    } catch (err) {
-      alert("Failed to update admin");
-    }
-  };
-
-  // ------------------------------
-  // ENABLE / DISABLE ADMIN
-  // ------------------------------
-  const handleToggleAdmin = async (id) => {
-    try {
-      const res = await axios.patch(
-        `${BASE_URL}/api/superadmin/admins/${id}/toggle`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      alert(res.data.msg);
-      fetchAdmins();
-    } catch (err) {
-      alert("Failed to toggle admin status");
-    }
-  };
-
-  // ------------------------------
-  // DELETE ADMIN
-  // ------------------------------
-  const handleDeleteAdmin = async (id) => {
-    if (!window.confirm("Delete this admin?")) return;
-
-    try {
-      await axios.delete(`${BASE_URL}/api/superadmin/admins/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      alert("Admin deleted!");
-      fetchAdmins();
-    } catch (err) {
-      alert("Failed to delete admin");
-    }
-  };
-
-  // ------------------------------
-  // UPDATE HOSPITAL NAME
-  // ------------------------------
-  const handleUpdateHospital = async (hospital) => {
-    const newName = prompt("Enter new hospital name:", hospital.name);
-    if (!newName) return;
-
-    try {
-      await axios.put(
-        `${BASE_URL}/api/superadmin/hospitals/${hospital._id}`,
-        { name: newName },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      alert("Hospital updated!");
-      fetchHospitals();
-    } catch (err) {
-      alert("Update failed");
-    }
-  };
-
-  // ------------------------------
-  // APPROVE HOSPITAL
-  // ------------------------------
+  /* ---------- Hospital actions ---------- */
   const handleApproveHospital = async (id) => {
     try {
-      await axios.put(
-        `${BASE_URL}/api/hospital/approve/${id}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      alert("Hospital Approved!");
+      await axios.put(`${BASE_URL}/api/hospital/approve/${id}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      alert("Hospital approved");
       fetchHospitals();
     } catch (err) {
-      alert(err.response?.data?.msg || "Approve failed");
+      console.error("approveHospital", err);
+      alert(err.response?.data?.message || "Approve failed");
     }
   };
 
-  // ------------------------------
-  // REJECT HOSPITAL
-  // ------------------------------
   const handleRejectHospital = async (id) => {
     try {
-      await axios.put(
-        `${BASE_URL}/api/hospital/reject/${id}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      alert("Hospital Rejected!");
+      await axios.put(`${BASE_URL}/api/hospital/reject/${id}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      alert("Hospital rejected");
       fetchHospitals();
     } catch (err) {
-      alert(err.response?.data?.msg || "Reject failed");
+      console.error("rejectHospital", err);
+      alert(err.response?.data?.message || "Reject failed");
     }
   };
 
-  // ------------------------------
-  // DELETE HOSPITAL
-  // ------------------------------
   const handleDeleteHospital = async (id) => {
-    if (!window.confirm("Are you sure? This cannot be undone.")) return;
-
+    if (!window.confirm("Delete hospital? This action cannot be undone.")) return;
     try {
-      await axios.delete(`${BASE_URL}/api/superadmin/hospitals/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      await axios.delete(`${BASE_URL}/api/superadmin/hospitals/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       alert("Hospital deleted");
       fetchHospitals();
+      fetchAllUsers();
     } catch (err) {
+      console.error("deleteHospital", err);
       alert("Delete failed");
     }
   };
 
-  // ------------------------------
-  // FILTER ADMINS
-  // ------------------------------
-  const filteredAdmins = admins.filter(
-    (a) =>
-      a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // ------------------------------
-  // STYLES
-  // ------------------------------
-  const card = {
-    background: "#fff",
-    padding: 20,
-    borderRadius: 10,
-    boxShadow: "0 3px 10px rgba(0,0,0,0.1)",
-    fontSize: 18,
-    fontWeight: "bold",
+  const handleEditHospitalName = async (hospital) => {
+    const newName = prompt("Enter new hospital name:", hospital.name || "");
+    if (!newName) return;
+    try {
+      await axios.put(`${BASE_URL}/api/superadmin/hospitals/${hospital._id}`, { name: newName }, { headers: { Authorization: `Bearer ${token}` } });
+      alert("Hospital updated");
+      fetchHospitals();
+    } catch (err) {
+      console.error("updateHospital", err);
+      alert("Update failed");
+    }
   };
 
-  const table = {
-    width: "100%",
-    borderCollapse: "collapse",
-    marginTop: 20,
+  /* ---------- User actions ---------- */
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Delete user?")) return;
+    try {
+      await axios.delete(`${BASE_URL}/api/superadmin/users/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
+      alert("User deleted");
+      fetchAllUsers();
+      // refresh hospital list (counts)
+      fetchHospitals();
+    } catch (err) {
+      console.error("deleteUser", err);
+      alert("Failed to delete user");
+    }
   };
 
-  const th = {
-    background: "#222",
-    color: "#fff",
-    padding: 10,
-    textAlign: "left",
+  /* ---------- Helpers: group users by hospital tenantId ---------- */
+  const groupedUsers = React.useMemo(() => {
+    // build mapping tenantId -> { hospitalName?, users: [] }
+    const map = {};
+    // attach hospitals names if available
+    hospitals.forEach((h) => {
+      const key = h.tenantId || h._id || "unknown";
+      map[key] = { hospital: h, users: [] };
+    });
+
+    users.forEach((u) => {
+      const key = u.selectedHospitalTenantId || "unknown";
+      if (!map[key]) map[key] = { hospital: null, users: [] };
+      map[key].users.push(u);
+    });
+
+    return map; // object
+  }, [users, hospitals]);
+
+  // search within grouped results (simple filter)
+  const visibleGroupKeys = Object.keys(groupedUsers).filter((tenantId) => {
+    const block = groupedUsers[tenantId];
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    // match hospital
+    const hname = block.hospital?.name ?? block.hospital?.hospitalName ?? "";
+    if ((hname || "").toLowerCase().includes(q)) return true;
+    // match any user name/email inside
+    return block.users.some((u) => (u.name || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q));
+  });
+
+  /* ---------- UI Helpers ---------- */
+  const toggleExpand = (tenantId) => {
+    setExpandedHospitals((prev) => ({ ...prev, [tenantId]: !prev[tenantId] }));
   };
 
-  const td = {
-    padding: 10,
-    borderBottom: "1px solid #ddd",
-  };
+  /* ---------- Styles (simple inline + small CSS injected) ---------- */
+  const container = { display: "flex", fontFamily: "Inter, system-ui, Arial", minHeight: "100vh" };
+  const sidebar = { width: 260, background: "#0b1220", color: "#fff", padding: 16, display: "flex", flexDirection: "column", justifyContent: "space-between", position: "fixed", left: 0, top: 0, bottom: 0 };
+  const main = { marginLeft: 280, padding: 28, flex: 1, background: "#f5f7fb", minHeight: "100vh" };
+  const menuItem = (active) => ({ padding: "10px 12px", borderRadius: 8, cursor: "pointer", marginBottom: 8, background: active ? "#111827" : "transparent", color: active ? "#A7F3D0" : "#d1d5db", fontWeight: active ? 700 : 600, transition: "background 180ms, transform 120ms" });
+  const card = { background: "#fff", padding: 18, borderRadius: 10, boxShadow: "0 6px 20px rgba(12,17,23,0.06)" };
+  const table = { width: "100%", borderCollapse: "collapse" };
+  const th = { textAlign: "left", padding: "10px 12px", background: "#0b1220", color: "#fff", borderRadius: 6 };
+  const td = { padding: "10px 12px", borderBottom: "1px solid #eee" };
 
-  // ------------------------------
+  // small animation CSS injection for fade and hover
+  const injectedStyles = `
+    .fade-in { animation: fadeIn 350ms ease both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .btn { padding: 8px 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+    .btn:active { transform: translateY(1px); }
+    .btn-light { background: #e6eef7; color: #0b1220; }
+    .btn-danger { background: #f87171; color: white; }
+    .btn-success { background: #34d399; color: white; }
+    .btn-warning { background: #fb923c; color: white; }
+    .small-muted { color: #6b7280; font-size: 13px; }
+    .pill { padding: 6px 10px; border-radius: 999px; background: #eef2ff; color: #3730a3; font-weight: 700; font-size: 13px; }
+  `;
+
+  if (loading) {
+    return (
+      <div style={{ ...container, alignItems: "center", justifyContent: "center" }}>
+        <style>{injectedStyles}</style>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 18, marginBottom: 8 }}>Loading dashboard...</div>
+          <div style={{ width: 48, height: 48, borderRadius: 8, background: "#0b1220", margin: "0 auto" }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ display: "flex" }}>
+    <div style={container}>
+      <style>{injectedStyles}</style>
+
       {/* SIDEBAR */}
-      <div
-        style={{
-          width: 250,
-          background: "#111",
-          color: "white",
-          padding: 20,
-          minHeight: "100vh",
-        }}
-      >
-        <h2>SuperAdmin</h2>
+      <div style={sidebar}>
+        <div>
+          <h2 style={{ margin: 0, color: "#A7F3D0" }}>SuperAdmin</h2>
+          <p style={{ marginTop: 6, color: "#9CA3AF", fontSize: 13 }}>Global management</p>
 
-        <div
-          style={{
-            marginTop: 20,
-            padding: 10,
-            cursor: "pointer",
-            background: activeSection === "Dashboard" ? "#333" : "transparent",
-          }}
-          onClick={() => setActiveSection("Dashboard")}
-        >
-          Dashboard
+          <div style={{ marginTop: 18 }}>
+            <div style={menuItem(activeSection === "Dashboard")} onClick={() => setActiveSection("Dashboard")}>Dashboard</div>
+            <div style={menuItem(activeSection === "Users")} onClick={() => setActiveSection("Users")}>Users</div>
+            <div style={menuItem(activeSection === "Hospitals")} onClick={() => setActiveSection("Hospitals")}>Hospitals</div>
+          </div>
         </div>
 
-        <div
-          style={{
-            marginTop: 10,
-            padding: 10,
-            cursor: "pointer",
-            background: activeSection === "Admins" ? "#333" : "transparent",
-          }}
-          onClick={() => setActiveSection("Admins")}
-        >
-          Manage Admins
-        </div>
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ width: 44, height: 44, borderRadius: 44, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0b1220", fontWeight: 800 }}>
+              SA
+            </div>
+            <div>
+              <div style={{ fontWeight: 700 }}>{(JSON.parse(localStorage.getItem("user") || "{}")).name || "SuperAdmin"}</div>
+              <div style={{ color: "#9CA3AF", fontSize: 13 }}>Super Admin</div>
+            </div>
+          </div>
 
-        <div
-          style={{
-            marginTop: 10,
-            padding: 10,
-            cursor: "pointer",
-            background: activeSection === "Hospitals" ? "#333" : "transparent",
-          }}
-          onClick={() => setActiveSection("Hospitals")}
-        >
-          Manage Hospitals
-        </div>
-
-        <div
-          onClick={handleLogout}
-          style={{
-            marginTop: 30,
-            padding: 10,
-            background: "red",
-            cursor: "pointer",
-            borderRadius: 4,
-          }}
-        >
-          Logout
+          <div style={{ marginTop: 14 }}>
+            <button className="btn btn-danger" onClick={handleLogout} style={{ width: "100%" }}>Logout</button>
+          </div>
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div style={{ padding: 30, flex: 1 }}>
-
-        {/* DASHBOARD */}
+      {/* MAIN */}
+      <div style={main}>
+        {/* DASHBOARD VIEW */}
         {activeSection === "Dashboard" && (
-          <div>
-            <h2>Dashboard Summary</h2>
+          <div className="fade-in">
+            <h1 style={{ marginTop: 0 }}>Dashboard</h1>
 
-            <div style={{ display: "flex", gap: 20 }}>
-              <div style={card}>Admins: {stats.admins}</div>
-              <div style={card}>Hospitals: {stats.hospitals}</div>
+            <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+              <div style={{ ...card, minWidth: 220 }}>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>Admins</div>
+                <div style={{ fontSize: 22, fontWeight: 800, marginTop: 6 }}>{stats.admins}</div>
+                <div className="small-muted" style={{ marginTop: 8 }}>Total Doctors-Are-Created accounts</div>
+              </div>
+
+              <div style={{ ...card, minWidth: 220 }}>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>Hospitals</div>
+                <div style={{ fontSize: 22, fontWeight: 800, marginTop: 6 }}>{stats.hospitals}</div>
+                <div className="small-muted" style={{ marginTop: 8 }}>Hospitals registered across system</div>
+              </div>
+
+              <div style={{ ...card, minWidth: 220 }}>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>Users</div>
+                <div style={{ fontSize: 22, fontWeight: 800, marginTop: 6 }}>{stats.users}</div>
+                <div className="small-muted" style={{ marginTop: 8 }}>All users (doctors/nurses/patients/staff)</div>
+              </div>
             </div>
           </div>
         )}
 
-        {/* ADMIN SECTION */}
-        {activeSection === "Admins" && (
-          <div>
-            <h2>Manage Admins</h2>
+        {/* USERS VIEW (grouped by hospital) */}
+        {activeSection === "Users" && (
+          <div className="fade-in">
+            <h1 style={{ marginTop: 0 }}>Users grouped by Hospital</h1>
 
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               <input
-                type="text"
-                placeholder="Name"
-                value={newAdmin.name}
-                onChange={(e) =>
-                  setNewAdmin({ ...newAdmin, name: e.target.value })
-                }
+                placeholder="Search hospitals or users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ flex: 1, padding: 10, borderRadius: 8, border: "1px solid #e6e9ef" }}
               />
-              <input
-                type="email"
-                placeholder="Email"
-                value={newAdmin.email}
-                onChange={(e) =>
-                  setNewAdmin({ ...newAdmin, email: e.target.value })
-                }
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={newAdmin.password}
-                onChange={(e) =>
-                  setNewAdmin({ ...newAdmin, password: e.target.value })
-                }
-              />
-              <button onClick={handleCreateAdmin}>Add</button>
+              <button className="btn btn-light" onClick={() => { setSearchTerm(""); }}>Clear</button>
             </div>
 
-            <input
-              type="text"
-              placeholder="Search..."
-              style={{ marginTop: 15, padding: 10 }}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {visibleGroupKeys.length === 0 ? (
+                <div style={{ ...card }}>No users found.</div>
+              ) : (
+                visibleGroupKeys.map((tenantId) => {
+                  const block = groupedUsers[tenantId];
+                  const hosp = block.hospital;
+                  const localUsers = block.users || [];
+                  const expanded = !!expandedHospitals[tenantId];
 
-            <table style={table}>
-              <thead>
-                <tr>
-                  <th style={th}>Name</th>
-                  <th style={th}>Email</th>
-                  <th style={th}>Status</th>
-                  <th style={th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAdmins.map((a) => (
-                  <tr key={a._id}>
-                    <td style={td}>{a.name}</td>
-                    <td style={td}>{a.email}</td>
-                    <td style={td}>{a.isApproved ? "Active" : "Disabled"}</td>
-                    <td style={td}>
-                      <button onClick={() => handleUpdateAdmin(a)}>Edit</button>
-                      <button
-                        style={{ marginLeft: 10 }}
-                        onClick={() => handleToggleAdmin(a._id)}
-                      >
-                        {a.isApproved ? "Disable" : "Enable"}
-                      </button>
-                      <button
-                        style={{
-                          marginLeft: 10,
-                          background: "red",
-                          color: "white",
-                        }}
-                        onClick={() => handleDeleteAdmin(a._id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  return (
+                    <div key={tenantId} style={{ background: "#fff", borderRadius: 10, padding: 12, boxShadow: "0 8px 26px rgba(12,17,23,0.04)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontWeight: 800 }}>{hosp?.name ?? "Unknown Hospital"} <span style={{ color: "#6b7280", fontSize: 13 }}>({tenantId})</span></div>
+                          <div className="small-muted">{localUsers.length} user(s) • {hosp?.status ?? "n/a"}</div>
+                        </div>
+
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <button className="btn btn-light" onClick={() => toggleExpand(tenantId)}>{expanded ? "Collapse" : "Expand"}</button>
+                          <button className="btn btn-danger" onClick={() => {
+                            if (window.confirm("Delete all users of this hospital? (This will delete users only)")) {
+                              // not implementing bulk-delete here; just a placeholder
+                              alert("Bulk delete not implemented in UI. Use API or individual deletes.");
+                            }
+                          }}>Bulk</button>
+                        </div>
+                      </div>
+
+                      {expanded && (
+                        <div style={{ marginTop: 12 }}>
+                          {localUsers.length === 0 ? (
+                            <div style={{ padding: 12 }} className="small-muted">No users for this hospital.</div>
+                          ) : (
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr>
+                                  <th style={{ textAlign: "left", padding: 8, fontWeight: 700 }}>Name</th>
+                                  <th style={{ textAlign: "left", padding: 8, fontWeight: 700 }}>Email</th>
+                                  <th style={{ textAlign: "left", padding: 8, fontWeight: 700 }}>Role</th>
+                                  <th style={{ textAlign: "left", padding: 8, fontWeight: 700 }}>Status</th>
+                                  <th style={{ textAlign: "left", padding: 8, fontWeight: 700 }}>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {localUsers.map((u) => (
+                                  <tr key={u._id}>
+                                    <td style={td}>{u.name || u.fullName || "-"}</td>
+                                    <td style={td}>{u.email}</td>
+                                    <td style={td}>{u.role || "user"}</td>
+                                    <td style={td}>{u.status || (u.isApproved ? "Approved" : "Pending")}</td>
+                                    <td style={td}>
+                                      <button className="btn btn-light" onClick={() => alert(JSON.stringify(u, null, 2))}>View</button>
+                                      <button className="btn btn-danger" style={{ marginLeft: 8 }} onClick={() => handleDeleteUser(u._id)}>Delete</button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
 
-        {/* HOSPITAL SECTION */}
         {activeSection === "Hospitals" && (
-          <div>
-            <h2>Manage Hospitals</h2>
+  <div className="fade-in">
+    <h1 style={{ marginTop: 0 }}>Hospitals</h1>
 
-            <table style={table}>
-              <thead>
-                <tr>
-                  <th style={th}>Name</th>
-                  <th style={th}>Address</th>
-                  <th style={th}>Phone</th>
-                  <th style={th}>Status</th>
-                  <th style={th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hospitals.map((h) => (
-                  <tr key={h._id}>
-                    <td style={td}>{h.name}</td>
-                    <td style={td}>{h.address}</td>
-                    <td style={td}>{h.phone}</td>
-                    <td style={td}>{h.status}</td>
+    {/* SEARCH BAR */}
+    <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+      <input
+        placeholder="Search hospitals..."
+        style={{
+          flex: 1,
+          padding: 10,
+          borderRadius: 8,
+          border: "1px solid #e6e9ef",
+        }}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        value={searchTerm}
+      />
 
-                    <td style={td}>
-                      {/* EDIT NAME */}
-                      <button onClick={() => handleUpdateHospital(h)}>
-                        Edit Name
-                      </button>
+      <button
+        className="btn btn-light"
+        onClick={() => {
+          setSearchTerm("");
+          fetchHospitals();
+        }}
+      >
+        Refresh
+      </button>
+    </div>
 
-                      {/* APPROVE */}
-                      {h.status !== "VERIFIED" && (
-                        <button
-                          style={{
-                            marginLeft: 10,
-                            background: "green",
-                            color: "white",
-                          }}
-                          onClick={() => handleApproveHospital(h._id)}
-                        >
-                          Approve
-                        </button>
-                      )}
+    {/* CARD LIST */}
+    <div style={{ display: "grid", gap: 16 }}>
+      {hospitals
+        .filter((h) => {
+          const q = searchTerm.toLowerCase();
+          return (
+            !searchTerm ||
+            (h.name || "").toLowerCase().includes(q) ||
+            (h.hospitalName || "").toLowerCase().includes(q) ||
+            (h.tenantId || "").toLowerCase().includes(q) ||
+            (h.address || "").toLowerCase().includes(q)
+          );
+        })
+        .map((h) => {
+          const expanded = expandedId === h._id;
+          const isVerified = String(h.status).toLowerCase() === "verified";
 
-                      {/* REJECT */}
-                      {h.status !== "INACTIVE" && (
-                        <button
-                          style={{
-                            marginLeft: 10,
-                            background: "orange",
-                            color: "white",
-                          }}
-                          onClick={() => handleRejectHospital(h._id)}
-                        >
-                          Reject
-                        </button>
-                      )}
+          return (
+            <div
+              key={h._id}
+              onClick={() =>
+                setExpandedId((prev) => (prev === h._id ? null : h._id))
+              }
+              style={{
+                background: "#fff",
+                borderRadius: 10,
+                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                padding: 16,
+                cursor: "pointer",
+                transition: "0.2s",
+              }}
+            >
+              {/* CARD TOP */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 6,
+                }}
+              >
+                <div>
+                  <h3 style={{ margin: 0, fontWeight: 800 }}>
+                    {h.name || h.hospitalName}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
+                    {h.address}
+                  </p>
+                </div>
 
-                      {/* DELETE */}
-                      <button
+                <div
+                  style={{
+                    background: "#eef2ff",
+                    color: "#3730a3",
+                    padding: "6px 12px",
+                    borderRadius: 30,
+                    fontWeight: 700,
+                    height: 30,
+                  }}
+                >
+                  {h.status}
+                </div>
+              </div>
+
+              {/* EXPANDED DETAILS */}
+              {expanded && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    paddingTop: 12,
+                    borderTop: "1px solid #e5e7eb",
+                    animation: "fadeIn 0.3s ease",
+                  }}
+                >
+                  {/* READ ONLY FORM */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 10,
+                      marginBottom: 14,
+                    }}
+                  >
+                    <div>
+                      <label style={{ fontSize: 12 }}>Hospital Name</label>
+                      <input
+                        readOnly
+                        value={h.name}
                         style={{
-                          marginLeft: 10,
-                          background: "red",
-                          color: "white",
+                          width: "100%",
+                          padding: 8,
+                          borderRadius: 6,
+                          border: "1px solid #ddd",
                         }}
-                        onClick={() => handleDeleteHospital(h._id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
+                      />
+                    </div>
 
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    <div>
+                      <label style={{ fontSize: 12 }}>Tenant ID</label>
+                      <input
+                        readOnly
+                        value={h.tenantId}
+                        style={{
+                          width: "100%",
+                          padding: 8,
+                          borderRadius: 6,
+                          border: "1px solid #ddd",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 12 }}>Email</label>
+                      <input
+                        readOnly
+                        value={h.email}
+                        style={{
+                          width: "100%",
+                          padding: 8,
+                          borderRadius: 6,
+                          border: "1px solid #ddd",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 12 }}>Phone</label>
+                      <input
+                        readOnly
+                        value={h.phone}
+                        style={{
+                          width: "100%",
+                          padding: 8,
+                          borderRadius: 6,
+                          border: "1px solid #ddd",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 12 }}>License Number</label>
+                      <input
+                        readOnly
+                        value={h.licenseNumber}
+                        style={{
+                          width: "100%",
+                          padding: 8,
+                          borderRadius: 6,
+                          border: "1px solid #ddd",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 12 }}>Created At</label>
+                      <input
+                        readOnly
+                        value={new Date(h.createdAt).toLocaleString()}
+                        style={{
+                          width: "100%",
+                          padding: 8,
+                          borderRadius: 6,
+                          border: "1px solid #ddd",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ACTION BUTTONS */}
+                  <div style={{ display: "flex", gap: 10 }}>
+                    
+                    {/* 🔥 UPDATED APPROVE BUTTON */}
+                    <button
+                      className="btn btn-success"
+                      disabled={isVerified}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isVerified) return;
+                        handleApproveHospital(h._id);
+                      }}
+                      style={{
+                        opacity: isVerified ? 0.5 : 1,
+                        cursor: isVerified ? "not-allowed" : "pointer",
+                        pointerEvents: isVerified ? "none" : "auto",
+                      }}
+                    >
+                      {isVerified ? "Approved" : "Approve"}
+                    </button>
+
+                    <button
+                      className="btn btn-warning"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRejectHospital(h._id);
+                      }}
+                    >
+                      Reject
+                    </button>
+
+                    <button
+                      className="btn btn-danger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteHospital(h._id);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+    </div>
+  </div>
+)}
+
+
       </div>
     </div>
   );

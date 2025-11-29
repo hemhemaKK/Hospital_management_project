@@ -9,29 +9,21 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
-
-  // ---------------- GOOGLE ----------------
   const apiUrl = process.env.REACT_APP_API_URL;
 
   const handleGoogleAuth = () => {
-    if (!apiUrl) {
-      console.error("REACT_APP_API_URL is undefined!");
-      return;
-    }
+    if (!apiUrl) return console.error("REACT_APP_API_URL is undefined!");
     window.location.href = `${apiUrl}/api/auth/google`;
   };
 
   const handleLogin = async () => {
     try {
       const res = await login({ email, password });
-
-      const user = res.data.user;
-      const token = res.data.token;
+      const { user, token } = res.data;
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
-      // ROLE-BASED REDIRECT
       if (user.role === "superadmin") return navigate("/superadmindashboard");
       if (user.role === "admin") return navigate("/admindashboard");
       if (user.role === "doctor") return navigate("/doctorDashboard");
@@ -39,7 +31,6 @@ export default function Login() {
       if (user.role === "receptionist") return navigate("/receptionDashboard");
       if (user.role === "pharmacist") return navigate("/pharmacistDashboard");
 
-      // DEFAULT: NORMAL USER
       navigate("/dashboard");
     } catch (err) {
       console.error(err);
@@ -52,7 +43,7 @@ export default function Login() {
       <div style={overlayStyle}></div>
 
       <Link to="/" style={homeBtnStyle}>
-        <FaHome size={22} /> Home
+        <FaHome size={20} /> Home
       </Link>
 
       <div style={containerStyle}>
@@ -81,30 +72,29 @@ export default function Login() {
           />
           <span
             onClick={() => setShowPassword(!showPassword)}
-            style={{ cursor: "pointer", color: "#7b7b7b" }}
+            style={{ cursor: "pointer", color: "#666", marginLeft: "6px" }}
           >
             {showPassword ? <FaEyeSlash /> : <FaEye />}
           </span>
         </div>
 
+        {/* Forgot Password Link */}
+        <p style={{ textAlign: "right", margin: "0.3rem 0", fontSize: "0.85rem" }}>
+          <Link to="/forgot-password" style={{ color: "#4CAF50" }}>
+            Forgot Password?
+          </Link>
+        </p>
+
         <button style={buttonStyle} onClick={handleLogin}>
           Login
         </button>
 
-        {/* 🔥 GOOGLE BUTTON */}
-        <button
-          style={{
-            ...buttonStyle,
-            backgroundColor: "white",
-            color: "black",
-            marginTop: "1rem",
-          }}
-          onClick={handleGoogleAuth}
-        >
+        {/* Google Login */}
+        <button style={googleBtnStyle} onClick={handleGoogleAuth}>
           Login with Google
         </button>
 
-        <p style={{ marginTop: "1rem", color: "#fff" }}>
+        <p style={textStyle}>
           New User?{" "}
           <Link to="/register" style={{ color: "#4CAF50" }}>
             Register
@@ -114,6 +104,8 @@ export default function Login() {
     </div>
   );
 }
+
+
 /* ---------------------- Styles ---------------------- */
 
 const pageWrapper = {
@@ -134,69 +126,83 @@ const overlayStyle = {
   left: 0,
   width: "100%",
   height: "100%",
-  backgroundColor: "rgba(0,0,0,0.5)",
+  backgroundColor: "rgba(0,0,0,0.55)",
   backdropFilter: "blur(5px)",
 };
 
 const homeBtnStyle = {
   position: "absolute",
-  top: "20px",
-  left: "20px",
+  top: "18px",
+  left: "18px",
   display: "flex",
   alignItems: "center",
   gap: "6px",
-  padding: "8px 12px",
-  borderRadius: "8px",
+  padding: "6px 10px",
+  borderRadius: "6px",
   backgroundColor: "#fff",
   boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
   fontWeight: "bold",
   color: "#333",
   textDecoration: "none",
-  transition: "all 0.3s ease",
   zIndex: 3,
 };
 
 const containerStyle = {
-  maxWidth: "400px",
-  padding: "2rem",
-  borderRadius: "12px",
-  boxShadow: "0px 8px 20px rgba(0,0,0,0.25)",
+  maxWidth: "380px",
+  padding: "1.5rem",
+  borderRadius: "10px",
+  boxShadow: "0px 6px 15px rgba(0,0,0,0.25)",
   textAlign: "center",
   backgroundColor: "rgba(255,255,255,0.1)",
   zIndex: 2,
 };
 
-const titleStyle = { marginBottom: "1.5rem", color: "#fff" };
+const titleStyle = { marginBottom: "1rem", color: "#fff" };
 
 const inputWrapper = {
   display: "flex",
   alignItems: "center",
   backgroundColor: "#f1f1f1",
-  borderRadius: "8px",
-  padding: "0.5rem 0.8rem",
-  margin: "0.7rem 0",
+  borderRadius: "6px",
+  padding: "0.35rem 0.5rem",
+  margin: "0.5rem 0",
 };
 
-const iconStyle = { marginRight: "8px", color: "#666" };
+const iconStyle = { marginRight: "6px", color: "#666" };
 
 const inputStyle = {
   flex: 1,
-  padding: "0.6rem",
+  padding: "0.4rem",
   border: "none",
   outline: "none",
-  fontSize: "1rem",
+  fontSize: "0.95rem",
   backgroundColor: "transparent",
 };
 
 const buttonStyle = {
   width: "100%",
-  padding: "0.8rem",
-  marginTop: "1rem",
-  borderRadius: "8px",
+  padding: "0.55rem",
+  marginTop: "0.7rem",
+  borderRadius: "6px",
   border: "none",
   backgroundColor: "#4CAF50",
   color: "white",
-  fontSize: "1rem",
+  fontSize: "0.95rem",
   cursor: "pointer",
   transition: "all 0.2s ease",
 };
+
+const googleBtnStyle = {
+  width: "100%",
+  padding: "0.55rem",
+  marginTop: "0.5rem",
+  borderRadius: "6px",
+  border: "none",
+  backgroundColor: "#fff",
+  color: "#333",
+  fontSize: "0.95rem",
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+};
+
+const textStyle = { marginTop: "0.8rem", color: "#fff", fontSize: "0.85rem" };

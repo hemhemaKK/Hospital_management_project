@@ -1,10 +1,23 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-
 import { register, verifyOtp } from "../services/auth";
 import { registerHospital, getHospitals } from "../services/hospitalApi";
-
 import { FaUser, FaEnvelope, FaLock, FaArrowLeft } from "react-icons/fa";
+
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix default marker icon issue
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
 
 export default function Register() {
   const [step, setStep] = useState(1);
@@ -13,7 +26,6 @@ export default function Register() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [otp, setOtp] = useState("");
 
   // Hospital registration fields
@@ -22,34 +34,16 @@ export default function Register() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
+  const [profilePic, setProfilePic] = useState(null);
+  const [location, setLocation] = useState({ lat: 51.505, lng: -0.09 });
+  const [markerPosition, setMarkerPosition] = useState(null);
 
-  // Hospital selection for normal users
   const [hospitals, setHospitals] = useState([]);
   const [selectedHospital, setSelectedHospital] = useState("");
 
   const navigate = useNavigate();
-
-  // ⭐ Auto-detect superadmin email
   const isSuperAdmin = email.toLowerCase().startsWith("superadmin");
 
-  // ---------------- GOOGLE ----------------
-  const apiUrl = process.env.REACT_APP_API_URL;
-
-  const handleGoogleInRegister = () => {
-    if (isHospital) {
-      return alert("Google login is not allowed for hospital registration.");
-    }
-
-    if (!firstName || !lastName || !email || !password || (!isSuperAdmin && !selectedHospital)) {
-      return alert("Please fill all required fields before using Google.");
-    }
-
-    return alert("Google login is only for Login. Use Email/Password to Register.");
-  };
-
-  // ------------------------------------------
-  // LOAD HOSPITALS
-  // ------------------------------------------
   useEffect(() => {
     async function loadHospitals() {
       try {
@@ -62,43 +56,68 @@ export default function Register() {
     loadHospitals();
   }, []);
 
-  // ------------------------------------------------
-  // REGISTER SUBMISSION
-  // ------------------------------------------------
+  // ---------------- Map Marker on click ----------------
+  function LocationMarker() {
+    useMapEvents({
+      click(e) {
+        setMarkerPosition(e.latlng);
+        setLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+      },
+    });
+    return markerPosition ? <Marker position={markerPosition} /> : null;
+  }
+
+  // ---------------- Map Center controller ----------------
+  function MapController({ location }) {
+    const map = useMap();
+    map.setView([location.lat, location.lng], map.getZoom());
+    return null;
+  }
+
+  const handleUseCurrentLocation = () => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setLocation({ lat: latitude, lng: longitude });
+        setMarkerPosition({ lat: latitude, lng: longitude });
+      },
+      (err) => alert("Could not get your location")
+    );
+  };
+
+  // ---------------- Register handlers ----------------
   const handleRegister = async () => {
     if (!firstName || !lastName || !email || !password)
       return alert("All fields are required");
 
-    // -------------------------
-    // HOSPITAL REGISTRATION
-    // -------------------------
     if (isHospital) {
+      if (!hospitalName || !phone || !address || !licenseNumber)
+        return alert("All hospital fields are required");
+
       try {
-        await registerHospital({
-          firstName,
-          lastName,
-          name: `${firstName} ${lastName}`,
-          email,
-          password,
-          phone,
-          hospitalName,
-          address,
-          licenseNumber,
-        });
+        const formData = new FormData();
+        formData.append("firstName", firstName);
+        formData.append("lastName", lastName);
+        formData.append("hospitalName", hospitalName);
+        formData.append("phone", phone);
+        formData.append("address", address);
+        formData.append("licenseNumber", licenseNumber);
+        formData.append("email", email);
+        formData.append("password", password);
+        formData.append("location", JSON.stringify(location));
+        if (profilePic) formData.append("profilePic", profilePic);
 
+        await registerHospital(formData);
         alert("Hospital registered. SuperAdmin will approve.");
-        return navigate("/login");
+        navigate("/login");
       } catch (err) {
-        return alert(err.response?.data?.msg || "Hospital registration failed");
+        alert(err.response?.data?.msg || "Hospital registration failed");
       }
+      return;
     }
 
-    // -------------------------
-    // NORMAL USER REGISTRATION
-    // -------------------------
-    if (!isSuperAdmin && !selectedHospital) {
+    if (!isSuperAdmin && !selectedHospital)
       return alert("Please select a hospital.");
-    }
 
     try {
       await register({
@@ -107,9 +126,8 @@ export default function Register() {
         name: `${firstName} ${lastName}`,
         email,
         password,
-        selectedHospital: isSuperAdmin ? null : selectedHospital, // 🚀 FIXED
+        selectedHospital: isSuperAdmin ? null : selectedHospital,
       });
-
       alert("OTP sent to your email.");
       setStep(2);
     } catch (err) {
@@ -117,9 +135,6 @@ export default function Register() {
     }
   };
 
-  // ------------------------------------------------
-  // OTP VERIFY
-  // ------------------------------------------------
   const handleVerifyOtp = async () => {
     if (!otp) return alert("Enter OTP");
 
@@ -132,10 +147,10 @@ export default function Register() {
     }
   };
 
+  // ---------------- Render ----------------
   return (
     <div style={pageWrapper}>
       <div style={overlayStyle}></div>
-
       <Link to="/" style={homeBtnStyle}>
         <FaArrowLeft size={20} /> Home
       </Link>
@@ -145,39 +160,39 @@ export default function Register() {
           <>
             <h2 style={titleStyle}>Register</h2>
 
-            {/* HOSPITAL TOGGLE */}
-            <label style={{ color: "white", marginBottom: "1rem" }}>
+            <label style={labelStyle}>
               <input
                 type="checkbox"
                 checked={isHospital}
                 onChange={() => setIsHospital(!isHospital)}
+                style={{ marginRight: "6px" }}
               />
               Register as Hospital
             </label>
 
-            {/* FIRST NAME */}
-            <div style={inputWrapper}>
-              <FaUser style={iconStyle} />
-              <input
-                style={inputStyle}
-                placeholder="First Name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
+            {/* Name Fields */}
+            <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.4rem" }}>
+              <div style={inputWrapperFlex}>
+                <FaUser style={iconStyle} />
+                <input
+                  style={inputStyle}
+                  placeholder="First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div style={inputWrapperFlex}>
+                <FaUser style={iconStyle} />
+                <input
+                  style={inputStyle}
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
             </div>
 
-            {/* LAST NAME */}
-            <div style={inputWrapper}>
-              <FaUser style={iconStyle} />
-              <input
-                style={inputStyle}
-                placeholder="Last Name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
-            </div>
-
-            {/* EMAIL */}
+            {/* Email */}
             <div style={inputWrapper}>
               <FaEnvelope style={iconStyle} />
               <input
@@ -188,7 +203,7 @@ export default function Register() {
               />
             </div>
 
-            {/* USER selects hospital (EXCEPT superadmin + hospital registration) */}
+            {/* Normal User Hospital Selection */}
             {!isHospital && !isSuperAdmin && (
               <div style={inputWrapper}>
                 <select
@@ -206,48 +221,97 @@ export default function Register() {
               </div>
             )}
 
-            {/* HOSPITAL FIELDS */}
+            {/* Hospital Fields */}
             {isHospital && (
               <>
-                <div style={inputWrapper}>
-                  <input
-                    style={inputStyle}
-                    placeholder="Hospital Name"
-                    value={hospitalName}
-                    onChange={(e) => setHospitalName(e.target.value)}
-                  />
+                <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.4rem" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={inputWrapperFlex}>
+                      <input
+                        style={inputStyle}
+                        placeholder="Hospital Name"
+                        value={hospitalName}
+                        onChange={(e) => setHospitalName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={inputWrapperFlex}>
+                      <input
+                        style={inputStyle}
+                        placeholder="Phone"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div style={inputWrapper}>
-                  <input
-                    style={inputStyle}
-                    placeholder="Hospital Phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
+                <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.4rem" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={inputWrapperFlex}>
+                      <input
+                        style={inputStyle}
+                        placeholder="Address"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={inputWrapperFlex}>
+                      <input
+                        style={inputStyle}
+                        placeholder="License Number"
+                        value={licenseNumber}
+                        onChange={(e) => setLicenseNumber(e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div style={inputWrapper}>
-                  <input
-                    style={inputStyle}
-                    placeholder="Address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                  />
+                {/* Profile Pic + Current Location */}
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.4rem" }}>
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <label htmlFor="profilePic" style={uploadBtnCompactStyle}>
+                      {profilePic ? "Change Hospital Picture" : "Upload Hospital Picture"}
+                    </label>
+                    <input
+                      id="profilePic"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => setProfilePic(e.target.files[0])}
+                    />
+                    {profilePic && (
+                      <div style={{ color: "#fff", fontSize: "0.7rem", marginTop: "0.2rem" }}>
+                        {profilePic.name}
+                      </div>
+                    )}
+                  </div>
+
+                  <button style={mapBtnCompactStyle} onClick={handleUseCurrentLocation}>
+                    Use Current Location
+                  </button>
                 </div>
 
-                <div style={inputWrapper}>
-                  <input
-                    style={inputStyle}
-                    placeholder="License Number"
-                    value={licenseNumber}
-                    onChange={(e) => setLicenseNumber(e.target.value)}
-                  />
-                </div>
+                {/* Map */}
+                <MapContainer
+                  center={[location.lat, location.lng]}
+                  zoom={13}
+                  style={{ height: "130px", width: "100%", borderRadius: "6px", marginBottom: "0.4rem" }}
+                >
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <LocationMarker />
+                  <MapController location={location} />
+                </MapContainer>
+                <p style={{ color: "#fff", fontSize: "0.75rem", marginTop: "0.2rem" }}>
+                  Click on map to select location
+                </p>
               </>
             )}
 
-            {/* PASSWORD */}
+            {/* Password */}
             <div style={inputWrapper}>
               <FaLock style={iconStyle} />
               <input
@@ -263,25 +327,16 @@ export default function Register() {
               Register
             </button>
 
-            {/* GOOGLE BUTTON */}
-            <button
-              style={{
-                ...buttonStyle,
-                backgroundColor: "white",
-                color: "black",
-                marginTop: "1rem",
-                opacity: isHospital ? 0.6 : 1,
-                cursor: isHospital ? "not-allowed" : "pointer",
-              }}
-              onClick={handleGoogleInRegister}
-            >
-              Continue with Google
-            </button>
+            <p style={{ color: "#fff", marginTop: "0.8rem" }}>
+              Already have an account?{" "}
+              <Link to="/login" style={{ color: "yellow" }}>
+                Login
+              </Link>
+            </p>
           </>
         ) : (
           <>
             <h2 style={titleStyle}>Verify OTP</h2>
-
             <div style={inputWrapper}>
               <input
                 style={inputStyle}
@@ -290,19 +345,11 @@ export default function Register() {
                 onChange={(e) => setOtp(e.target.value)}
               />
             </div>
-
             <button style={buttonStyle} onClick={handleVerifyOtp}>
               Verify OTP
             </button>
           </>
         )}
-
-        <p style={{ color: "#fff", marginTop: "1.5rem" }}>
-          Already have an account?{" "}
-          <Link to="/login" style={{ color: "yellow" }}>
-            Login
-          </Link>
-        </p>
       </div>
     </div>
   );
@@ -338,8 +385,8 @@ const homeBtnStyle = {
   display: "flex",
   alignItems: "center",
   gap: "6px",
-  padding: "8px 12px",
-  borderRadius: "8px",
+  padding: "6px 10px",
+  borderRadius: "6px",
   backgroundColor: "#fff",
   boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
   fontWeight: "bold",
@@ -348,42 +395,76 @@ const homeBtnStyle = {
 };
 
 const containerStyle = {
-  maxWidth: "400px",
-  padding: "2rem",
-  borderRadius: "12px",
-  boxShadow: "0px 8px 20px rgba(0,0,0,0.25)",
+  maxWidth: "520px",
+  padding: "1rem",
+  borderRadius: "10px",
+  boxShadow: "0px 6px 15px rgba(0,0,0,0.25)",
   textAlign: "center",
   backgroundColor: "rgba(255,255,255,0.1)",
   zIndex: 2,
 };
 
-const titleStyle = { marginBottom: "1.5rem", color: "#fff" };
+const titleStyle = { marginBottom: "0.8rem", color: "#fff" };
+const labelStyle = { color: "#fff", marginBottom: "0.6rem", display: "block" };
+
 const inputWrapper = {
   display: "flex",
   alignItems: "center",
   backgroundColor: "#f1f1f1",
-  borderRadius: "8px",
-  padding: "0.5rem 0.8rem",
-  margin: "0.7rem 0",
+  borderRadius: "4px",
+  padding: "0.25rem 0.4rem",
+  marginBottom: "0.35rem",
 };
-const iconStyle = { marginRight: "8px", color: "#666" };
+
+const inputWrapperFlex = {
+  display: "flex",
+  alignItems: "center",
+  flex: 1,
+  backgroundColor: "#f1f1f1",
+  borderRadius: "4px",
+  padding: "0.25rem 0.4rem",
+};
+
+const iconStyle = { marginRight: "6px", color: "#666" };
+
 const inputStyle = {
   flex: 1,
-  padding: "0.6rem",
+  padding: "0.35rem",
   border: "none",
   outline: "none",
-  fontSize: "1rem",
+  fontSize: "0.85rem",
   backgroundColor: "transparent",
 };
+
 const buttonStyle = {
   width: "100%",
-  padding: "0.8rem",
-  marginTop: "1rem",
-  borderRadius: "8px",
+  padding: "0.55rem",
+  marginTop: "0.5rem",
+  borderRadius: "4px",
   border: "none",
   backgroundColor: "#4CAF50",
   color: "white",
-  fontSize: "1rem",
+  fontSize: "0.95rem",
   cursor: "pointer",
   transition: "all 0.2s ease",
+};
+
+const uploadBtnCompactStyle = {
+  display: "inline-block",
+  padding: "0.25rem 0.5rem",
+  backgroundColor: "#4CAF50",
+  color: "#fff",
+  borderRadius: "4px",
+  cursor: "pointer",
+  fontSize: "0.75rem",
+};
+
+const mapBtnCompactStyle = {
+  padding: "0.25rem 0.5rem",
+  fontSize: "0.75rem",
+  borderRadius: "4px",
+  border: "none",
+  backgroundColor: "#4CAF50",
+  color: "#fff",
+  cursor: "pointer",
 };
