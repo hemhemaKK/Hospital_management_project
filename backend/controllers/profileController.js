@@ -39,7 +39,7 @@ exports.verifyOtp = async (req, res) => {
     const response = await axios.get(url);
 
     if (response.data.Status === "Success") {
-      const user = await User.findById(req.user.id);
+      const user = await User.findById(req.user._id);
       user.phone = phone;
       user.isPhoneVerified = true;
       await user.save();
