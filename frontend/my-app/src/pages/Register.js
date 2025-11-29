@@ -29,34 +29,43 @@ export default function Register() {
   const navigate = useNavigate();
 
   // ---------------- REGISTER ----------------
-  const handleRegister = async () => {
-    if (!firstName || !lastName || !email || !password)
-      return alert("All fields are required");
+const handleRegister = async () => {
+  if (!firstName || !lastName || !email || !password)
+    return alert("All fields are required");
 
-    // Auto-generate name field from first+last (your requirement)
-    const finalName = `${firstName} ${lastName}`;
+  const finalName = `${firstName} ${lastName}`;
 
-    const payload = {
-      name: finalName,
-      firstName,
-      lastName,
-      email,
-      password,
-      isHospital,
-      phone,
-      address,
-      licenseNumber,
-      hospitalName
-    };
+  const payload = isHospital
+    ? {
+        name: finalName,
+        firstName,
+        lastName,
+        email,
+        password,
+        isHospital,
+        hospitalName,
+        address,
+        licenseNumber,
+        hospitalPhone: phone,  // ✔ FIXED FIELD
+      }
+    : {
+        name: finalName,
+        firstName,
+        lastName,
+        email,
+        password,
+        isHospital,
+      };
 
-    try {
-      await register(payload);
-      alert("OTP sent to your email. Please verify.");
-      setStep(2);
-    } catch (err) {
-      alert(err.response?.data?.msg || "Registration failed");
-    }
-  };
+  try {
+    await register(payload);
+    alert("OTP sent to your email.");
+    setStep(2);
+  } catch (err) {
+    alert(err.response?.data?.msg || "Registration failed");
+  }
+};
+
 
   // ---------------- VERIFY OTP ----------------
   const handleVerifyOtp = async () => {

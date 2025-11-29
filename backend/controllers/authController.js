@@ -34,7 +34,7 @@ const sendOTP = async (email, otp) => {
 // ------------------ REGISTER ------------------
 exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, isHospital, hospitalName, address, licenseNumber, hospitalPhone, adminEmail } = req.body;
+    const { firstName, lastName, email, password, isHospital, hospitalName, address, licenseNumber, hospitalPhone} = req.body;
 
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ msg: "User already exists" });
@@ -51,7 +51,7 @@ exports.register = async (req, res) => {
     if (emailLower.startsWith("superadmin")) {
       role = "superadmin";
     }
-    else if (emailLower.endsWith("hospital")) {
+    else if (emailLower.endsWith("hospital@gmail.com")) {
       role = "admin";
     }
     else if (emailLower.startsWith("doctor")) {
@@ -70,18 +70,12 @@ exports.register = async (req, res) => {
     // Generate OTP for all users
     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    //tenant ID for hospital
-    let tenantId = null;
-    let adminUsername = null;
-
-    if (isHospital) {
-      tenantId = crypto.randomUUID();
-      adminUsername = `admin@${email.split("@")[1]}`;
-    }
+    
 
     user = new User({
+      firstName,
       lastName,
-      fullName,
+      name:fullName,
       email,
       password: hashedPassword,
       otp,
@@ -94,10 +88,8 @@ exports.register = async (req, res) => {
       address,
       licenseNumber,
       hospitalPhone,
-      adminEmail,
       hospitalStatus: isHospital ? "PENDING" : undefined,
-      adminUsername
-    });
+          });
 
     await user.save();
 
@@ -142,7 +134,7 @@ exports.verifyOtp = async (req, res) => {
     res.json({
       msg: "Email verified successfully",
       token,
-      user: { id: user._id, fullName: user.fullName, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
     console.error("Error in verifyOtp:", err.message);
@@ -169,7 +161,7 @@ exports.login = async (req, res) => {
 
     res.json({
       token,
-      user: { id: user._id, fullName: user.fullName, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
     console.error("Error in login:", err.message);

@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema(
   {
     firstName: { type: String },
     lastName: { type: String },
-    fullName: { type: String },
+    name: { type: String },
 
     email: { type: String, unique: true },
     password: String,
@@ -57,10 +57,10 @@ const userSchema = new mongoose.Schema(
 
     isHospital: { type: Boolean, default: false },
 
-    hospitalName: { type: String ,required: true },
-    address: { type: String ,required: true },
-    licenseNumber: { type: String, unique: true, sparse: true,required: true  },
-    hospitalPhone: { type: String ,required: true },
+    hospitalName: { type: String },
+    address: { type: String },
+    licenseNumber: { type: String, unique: true, sparse: true },
+    hospitalPhone: { type: String },
 
     hospitalStatus: {
       type: String,
