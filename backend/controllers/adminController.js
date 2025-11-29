@@ -248,15 +248,20 @@ export const updateCategory = async (req, res) => {
  */
 export const getAllCategories = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    // ANY ROLE CAN ACCESS (user, nurse, doctor, admin)
+    const tenantId = req.user.selectedHospitalTenantId || req.user.tenantId;
+
+    if (!tenantId)
+      return res.status(400).json({ message: "Tenant ID missing" });
 
     const hospital = await Hospital.findOne({ tenantId });
-    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+    if (!hospital)
+      return res.status(404).json({ message: "Hospital not found" });
 
-    res.json(hospital.categories);
-
+    // Return only category list (SAFE)
+    return res.json(hospital.categories);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
 
