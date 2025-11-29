@@ -9,98 +9,104 @@ export default function SuperAdminDashboard() {
   const token = localStorage.getItem("token");
 
   const [activeSection, setActiveSection] = useState("Dashboard");
+
+  /** ADMIN STATES */
   const [admins, setAdmins] = useState([]);
-  const [stats, setStats] = useState({ admins: 0, users: 0, tickets: 0 });
-  const [newAdmin, setNewAdmin] = useState({ name: "", email: "", password: "" });
+  const [stats, setStats] = useState({ admins: 0, hospitals: 0 });
+  const [newAdmin, setNewAdmin] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch all admins
+  /** HOSPITAL STATES */
+  const [hospitals, setHospitals] = useState([]);
+
+  // ------------------------------
+  // FETCH ADMINS
+  // ------------------------------
   const fetchAdmins = useCallback(async () => {
     if (!token) return;
+
     try {
       const res = await axios.get(`${BASE_URL}/api/superadmin/admins`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       setAdmins(res.data);
       setStats((prev) => ({ ...prev, admins: res.data.length }));
     } catch (err) {
-      console.error(err);
+      console.error("Admin fetch failed:", err);
     }
   }, [token]);
 
+  // ------------------------------
+  // FETCH HOSPITALS
+  // ------------------------------
+  const fetchHospitals = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const res = await axios.get(`${BASE_URL}/api/superadmin/hospitals`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setHospitals(res.data.hospitals);
+      setStats((prev) => ({ ...prev, hospitals: res.data.hospitals.length }));
+    } catch (err) {
+      console.error("Hospital fetch failed:", err);
+    }
+  }, [token]);
+
+  // ------------------------------
+  // LOAD DATA ON PAGE LOAD
+  // ------------------------------
   useEffect(() => {
     if (!token) {
       navigate("/login");
       return;
     }
     fetchAdmins();
-  }, [token, fetchAdmins, navigate]); // ✅ dependencies added
+    fetchHospitals();
+  }, [token, fetchAdmins, fetchHospitals, navigate]);
 
+  // ------------------------------
+  // LOGOUT
+  // ------------------------------
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/login");
   };
 
-  // Create admin
+  // ------------------------------
+  // CREATE ADMIN
+  // ------------------------------
   const handleCreateAdmin = async () => {
-    const { name, email, password } = newAdmin;
-    if (!name || !email || !password) return alert("All fields are required!");
-    if (!token) return alert("No token found, please login again!");
+    if (!newAdmin.name || !newAdmin.email || !newAdmin.password)
+      return alert("All fields are required!");
 
     try {
-      const res = await axios.post(
-        `${BASE_URL}/api/superadmin/admins`,
-        newAdmin,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.post(`${BASE_URL}/api/superadmin/admins`, newAdmin, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       alert("Admin created successfully!");
-      setAdmins((prev) => [...prev, res.data.admin]);
+      fetchAdmins();
       setNewAdmin({ name: "", email: "", password: "" });
     } catch (err) {
-      console.error(err);
       alert("Failed to create admin");
     }
   };
 
-  // Toggle admin (enable/disable)
-  const handleToggleAdmin = async (id) => {
-    if (!token) return;
-    try {
-      const res = await axios.patch(
-        `${BASE_URL}/api/superadmin/admins/${id}/toggle`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert(res.data.msg);
-      fetchAdmins();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to update admin");
-    }
-  };
-
-  // Delete admin
-  const handleDeleteAdmin = async (id) => {
-    if (!window.confirm("Delete this admin?")) return;
-    if (!token) return;
-    try {
-      await axios.delete(`${BASE_URL}/api/superadmin/admins/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setAdmins((prev) => prev.filter((a) => a._id !== id));
-      alert("Admin deleted successfully!");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete admin");
-    }
-  };
-
-  // Update admin
+  // ------------------------------
+  // UPDATE ADMIN
+  // ------------------------------
   const handleUpdateAdmin = async (admin) => {
-    const newName = prompt("Enter new name", admin.name);
-    const newEmail = prompt("Enter new email", admin.email);
-    if (!newName || !newEmail) return alert("Fields cannot be empty!");
-    if (!token) return;
+    const newName = prompt("New admin name:", admin.name);
+    const newEmail = prompt("New admin email:", admin.email);
+
+    if (!newName || !newEmail) return;
 
     try {
       await axios.put(
@@ -108,117 +114,250 @@ export default function SuperAdminDashboard() {
         { name: newName, email: newEmail },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       alert("Admin updated!");
       fetchAdmins();
     } catch (err) {
-      console.error(err);
+      alert("Failed to update admin");
+    }
+  };
+
+  // ------------------------------
+  // ENABLE / DISABLE ADMIN
+  // ------------------------------
+  const handleToggleAdmin = async (id) => {
+    try {
+      const res = await axios.patch(
+        `${BASE_URL}/api/superadmin/admins/${id}/toggle`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert(res.data.msg);
+      fetchAdmins();
+    } catch (err) {
+      alert("Failed to toggle admin status");
+    }
+  };
+
+  // ------------------------------
+  // DELETE ADMIN
+  // ------------------------------
+  const handleDeleteAdmin = async (id) => {
+    if (!window.confirm("Delete this admin?")) return;
+
+    try {
+      await axios.delete(`${BASE_URL}/api/superadmin/admins/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      alert("Admin deleted!");
+      fetchAdmins();
+    } catch (err) {
+      alert("Failed to delete admin");
+    }
+  };
+
+  // ------------------------------
+  // UPDATE HOSPITAL NAME
+  // ------------------------------
+  const handleUpdateHospital = async (hospital) => {
+    const newName = prompt("Enter new hospital name:", hospital.name);
+    if (!newName) return;
+
+    try {
+      await axios.put(
+        `${BASE_URL}/api/superadmin/hospitals/${hospital._id}`,
+        { name: newName },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("Hospital updated!");
+      fetchHospitals();
+    } catch (err) {
       alert("Update failed");
     }
   };
 
-  const filteredAdmins = admins.filter((a) =>
-    a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.email.toLowerCase().includes(searchTerm.toLowerCase())
+  // ------------------------------
+  // APPROVE HOSPITAL
+  // ------------------------------
+  const handleApproveHospital = async (id) => {
+    try {
+      await axios.put(
+        `${BASE_URL}/api/hospital/approve/${id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("Hospital Approved!");
+      fetchHospitals();
+    } catch (err) {
+      alert(err.response?.data?.msg || "Approve failed");
+    }
+  };
+
+  // ------------------------------
+  // REJECT HOSPITAL
+  // ------------------------------
+  const handleRejectHospital = async (id) => {
+    try {
+      await axios.put(
+        `${BASE_URL}/api/hospital/reject/${id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("Hospital Rejected!");
+      fetchHospitals();
+    } catch (err) {
+      alert(err.response?.data?.msg || "Reject failed");
+    }
+  };
+
+  // ------------------------------
+  // DELETE HOSPITAL
+  // ------------------------------
+  const handleDeleteHospital = async (id) => {
+    if (!window.confirm("Are you sure? This cannot be undone.")) return;
+
+    try {
+      await axios.delete(`${BASE_URL}/api/superadmin/hospitals/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      alert("Hospital deleted");
+      fetchHospitals();
+    } catch (err) {
+      alert("Delete failed");
+    }
+  };
+
+  // ------------------------------
+  // FILTER ADMINS
+  // ------------------------------
+  const filteredAdmins = admins.filter(
+    (a) =>
+      a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // UI styles
-  const cardStyle = {
-    backgroundColor: "#fff",
-    padding: "20px",
-    borderRadius: "10px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  // ------------------------------
+  // STYLES
+  // ------------------------------
+  const card = {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 10,
+    boxShadow: "0 3px 10px rgba(0,0,0,0.1)",
+    fontSize: 18,
     fontWeight: "bold",
-    fontSize: "18px",
-    textAlign: "center",
   };
 
-  const tableStyle = {
+  const table = {
     width: "100%",
     borderCollapse: "collapse",
-    backgroundColor: "#fff",
-    borderRadius: "10px",
-    overflow: "hidden",
-    marginTop: "20px",
+    marginTop: 20,
   };
 
-  const thStyle = {
-    backgroundColor: "#222",
+  const th = {
+    background: "#222",
     color: "#fff",
-    padding: "10px",
+    padding: 10,
     textAlign: "left",
   };
 
-  const tdStyle = {
-    padding: "10px",
-    borderBottom: "1px solid #eee",
+  const td = {
+    padding: 10,
+    borderBottom: "1px solid #ddd",
   };
 
+  // ------------------------------
   return (
     <div style={{ display: "flex" }}>
-      {/* Sidebar */}
+      {/* SIDEBAR */}
       <div
         style={{
-          width: "250px",
-          backgroundColor: "#111",
-          color: "#fff",
-          padding: "20px",
+          width: 250,
+          background: "#111",
+          color: "white",
+          padding: 20,
           minHeight: "100vh",
         }}
       >
-        <h2>Super Admin</h2>
+        <h2>SuperAdmin</h2>
+
         <div
           style={{
-            marginTop: "20px",
+            marginTop: 20,
+            padding: 10,
             cursor: "pointer",
-            padding: "10px",
             background: activeSection === "Dashboard" ? "#333" : "transparent",
           }}
           onClick={() => setActiveSection("Dashboard")}
         >
           Dashboard
         </div>
+
         <div
           style={{
-            marginTop: "10px",
+            marginTop: 10,
+            padding: 10,
             cursor: "pointer",
-            padding: "10px",
             background: activeSection === "Admins" ? "#333" : "transparent",
           }}
           onClick={() => setActiveSection("Admins")}
         >
           Manage Admins
         </div>
+
         <div
           style={{
-            marginTop: "10px",
+            marginTop: 10,
+            padding: 10,
             cursor: "pointer",
-            padding: "10px",
-            backgroundColor: "red",
+            background: activeSection === "Hospitals" ? "#333" : "transparent",
           }}
+          onClick={() => setActiveSection("Hospitals")}
+        >
+          Manage Hospitals
+        </div>
+
+        <div
           onClick={handleLogout}
+          style={{
+            marginTop: 30,
+            padding: 10,
+            background: "red",
+            cursor: "pointer",
+            borderRadius: 4,
+          }}
         >
           Logout
         </div>
       </div>
 
-      {/* Main content */}
-      <div style={{ padding: "30px", flex: 1 }}>
+      {/* MAIN CONTENT */}
+      <div style={{ padding: 30, flex: 1 }}>
+
+        {/* DASHBOARD */}
         {activeSection === "Dashboard" && (
           <div>
-            <h2>Dashboard Overview</h2>
-            <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-              <div style={cardStyle}>Admins: {stats.admins}</div>
+            <h2>Dashboard Summary</h2>
+
+            <div style={{ display: "flex", gap: 20 }}>
+              <div style={card}>Admins: {stats.admins}</div>
+              <div style={card}>Hospitals: {stats.hospitals}</div>
             </div>
           </div>
         )}
 
-        {/* Manage Admins */}
+        {/* ADMIN SECTION */}
         {activeSection === "Admins" && (
           <div>
             <h2>Manage Admins</h2>
 
-            {/* Add admin */}
-            <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+            <div style={{ display: "flex", gap: 10 }}>
               <input
                 type="text"
                 placeholder="Name"
@@ -243,65 +382,130 @@ export default function SuperAdminDashboard() {
                   setNewAdmin({ ...newAdmin, password: e.target.value })
                 }
               />
-              <button onClick={handleCreateAdmin}>Add Admin</button>
+              <button onClick={handleCreateAdmin}>Add</button>
             </div>
 
-            {/* Search */}
             <input
               type="text"
-              placeholder="Search admins..."
-              style={{ marginTop: "20px", padding: "10px", width: "250px" }}
+              placeholder="Search..."
+              style={{ marginTop: 15, padding: 10 }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
 
-            <table style={tableStyle}>
+            <table style={table}>
               <thead>
                 <tr>
-                  <th style={thStyle}>Name</th>
-                  <th style={thStyle}>Email</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Actions</th>
+                  <th style={th}>Name</th>
+                  <th style={th}>Email</th>
+                  <th style={th}>Status</th>
+                  <th style={th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredAdmins.map((admin) => (
-                  <tr key={admin._id}>
-                    <td style={tdStyle}>{admin.name}</td>
-                    <td style={tdStyle}>{admin.email}</td>
-                    <td style={tdStyle}>
-                      {admin.isApproved ? (
-                        <span style={{ color: "green" }}>Active</span>
-                      ) : (
-                        <span style={{ color: "red" }}>Disabled</span>
-                      )}
-                    </td>
-
-                    <td style={tdStyle}>
-                      <button onClick={() => handleUpdateAdmin(admin)}>Edit</button>
+                {filteredAdmins.map((a) => (
+                  <tr key={a._id}>
+                    <td style={td}>{a.name}</td>
+                    <td style={td}>{a.email}</td>
+                    <td style={td}>{a.isApproved ? "Active" : "Disabled"}</td>
+                    <td style={td}>
+                      <button onClick={() => handleUpdateAdmin(a)}>Edit</button>
                       <button
-                        onClick={() => handleToggleAdmin(admin._id)}
-                        style={{ marginLeft: "10px" }}
+                        style={{ marginLeft: 10 }}
+                        onClick={() => handleToggleAdmin(a._id)}
                       >
-                        {admin.isApproved ? "Disable" : "Enable"}
+                        {a.isApproved ? "Disable" : "Enable"}
                       </button>
                       <button
-                        onClick={() => handleDeleteAdmin(admin._id)}
-                        style={{ marginLeft: "10px", backgroundColor: "red", color: "#fff" }}
+                        style={{
+                          marginLeft: 10,
+                          background: "red",
+                          color: "white",
+                        }}
+                        onClick={() => handleDeleteAdmin(a._id)}
                       >
                         Delete
                       </button>
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-                {filteredAdmins.length === 0 && (
-                  <tr>
-                    <td colSpan="4" style={{ textAlign: "center", padding: "15px" }}>
-                      No admins found.
+        {/* HOSPITAL SECTION */}
+        {activeSection === "Hospitals" && (
+          <div>
+            <h2>Manage Hospitals</h2>
+
+            <table style={table}>
+              <thead>
+                <tr>
+                  <th style={th}>Name</th>
+                  <th style={th}>Address</th>
+                  <th style={th}>Phone</th>
+                  <th style={th}>Status</th>
+                  <th style={th}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hospitals.map((h) => (
+                  <tr key={h._id}>
+                    <td style={td}>{h.name}</td>
+                    <td style={td}>{h.address}</td>
+                    <td style={td}>{h.phone}</td>
+                    <td style={td}>{h.status}</td>
+
+                    <td style={td}>
+                      {/* EDIT NAME */}
+                      <button onClick={() => handleUpdateHospital(h)}>
+                        Edit Name
+                      </button>
+
+                      {/* APPROVE */}
+                      {h.status !== "VERIFIED" && (
+                        <button
+                          style={{
+                            marginLeft: 10,
+                            background: "green",
+                            color: "white",
+                          }}
+                          onClick={() => handleApproveHospital(h._id)}
+                        >
+                          Approve
+                        </button>
+                      )}
+
+                      {/* REJECT */}
+                      {h.status !== "INACTIVE" && (
+                        <button
+                          style={{
+                            marginLeft: 10,
+                            background: "orange",
+                            color: "white",
+                          }}
+                          onClick={() => handleRejectHospital(h._id)}
+                        >
+                          Reject
+                        </button>
+                      )}
+
+                      {/* DELETE */}
+                      <button
+                        style={{
+                          marginLeft: 10,
+                          background: "red",
+                          color: "white",
+                        }}
+                        onClick={() => handleDeleteHospital(h._id)}
+                      >
+                        Delete
+                      </button>
                     </td>
+
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>

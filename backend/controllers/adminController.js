@@ -1,24 +1,41 @@
 import User from "../models/User.js";
-import Category from "../models/Category.js";
+import Hospital from "../models/Hospital.js";  // IMPORTANT
 
-// Get all users
+/**
+ * ============================
+ *  GET ALL USERS (TENANT-FILTERED)
+ * ============================
+ */
 export const getAllUsers = async (req, res) => {
   try {
     if (req.user.role !== "admin")
       return res.status(403).json({ message: "Access denied: not admin" });
 
-    const users = await User.find().select("-password -otp");
+    const tenantId = req.user.tenantId;
+
+    const users = await User.find({
+      selectedHospitalTenantId: tenantId
+    }).select("-password -otp");
+
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Get all employees
-// Get all doctors
+/**
+ * ============================
+ *  GET ALL DOCTORS (TENANT-FILTERED)
+ * ============================
+ */
 export const getAllDoctors = async (req, res) => {
   try {
-    const doctors = await User.find({ role: "doctor" })
+    const tenantId = req.user.tenantId;
+
+    const doctors = await User.find({
+      role: "doctor",
+      selectedHospitalTenantId: tenantId
+    })
       .populate("selectedCategory", "name")
       .sort({ createdAt: -1 })
       .select("name email role phone isApproved selectedCategory");
@@ -29,11 +46,19 @@ export const getAllDoctors = async (req, res) => {
   }
 };
 
-// Get pending doctors (correct role name)
+/**
+ * ============================
+ *  GET PENDING DOCTORS (TENANT-FILTERED)
+ * ============================
+ */
 export const getPendingDoctors = async (req, res) => {
   try {
-    const pending = await User.find({ role: "doctor_pending" })
-      .select("name email role isApproved");
+    const tenantId = req.user.tenantId;
+
+    const pending = await User.find({
+      role: "doctor_pending",
+      selectedHospitalTenantId: tenantId
+    }).select("name email role isApproved");
 
     res.status(200).json(pending);
   } catch (err) {
@@ -41,39 +66,58 @@ export const getPendingDoctors = async (req, res) => {
   }
 };
 
-// Approve doctor
+/**
+ * ============================
+ *  APPROVE DOCTOR
+ * ============================
+ */
 export const approveDoctors = async (req, res) => {
   try {
     const { id } = req.params;
-    const doctor = await User.findById(id);
+    const tenantId = req.user.tenantId;
 
-    if (!doctor || (doctor.role !== "doctor" && doctor.role !== "doctor_pending"))
+    const doctor = await User.findOne({
+      _id: id,
+      selectedHospitalTenantId: tenantId
+    });
+
+    if (!doctor)
       return res.status(404).json({ message: "Doctor not found" });
 
-    doctor.role = "doctor"; // convert pending → active
+    doctor.role = "doctor";
     doctor.isApproved = true;
 
     await doctor.save();
 
-    res.status(200).json({ message: "Doctor approved", doctor });
+    res.json({ message: "Doctor approved", doctor });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Toggle doctor approval
+/**
+ * ============================
+ *  TOGGLE DOCTOR APPROVAL
+ * ============================
+ */
 export const toggleDoctorApproval = async (req, res) => {
   try {
     const { id } = req.params;
-    const doctor = await User.findById(id);
+    const tenantId = req.user.tenantId;
 
-    if (!doctor || doctor.role !== "doctor")
+    const doctor = await User.findOne({
+      _id: id,
+      role: "doctor",
+      selectedHospitalTenantId: tenantId
+    });
+
+    if (!doctor)
       return res.status(404).json({ message: "Doctor not found" });
 
     doctor.isApproved = !doctor.isApproved;
     await doctor.save();
 
-    res.status(200).json({
+    res.json({
       message: doctor.isApproved ? "Doctor approved" : "Doctor disapproved",
       doctor
     });
@@ -82,121 +126,227 @@ export const toggleDoctorApproval = async (req, res) => {
   }
 };
 
-// Reject doctor
+/**
+ * ============================
+ *  REJECT DOCTOR
+ * ============================
+ */
 export const rejectDoctor = async (req, res) => {
   try {
     const { id } = req.params;
-    const doctor = await User.findById(id);
+    const tenantId = req.user.tenantId;
 
-    if (!doctor || (doctor.role !== "doctor" && doctor.role !== "doctor_pending"))
+    const doctor = await User.findOne({
+      _id: id,
+      selectedHospitalTenantId: tenantId
+    });
+
+    if (!doctor)
       return res.status(404).json({ message: "Doctor not found" });
 
     await User.findByIdAndDelete(id);
 
-    res.status(200).json({ message: "Doctor rejected and deleted" });
+    res.json({ message: "Doctor rejected and deleted" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Delete user
+/**
+ * ============================
+ *  DELETE USER
+ * ============================
+ */
 export const deleteUser = async (req, res) => {
   try {
-    if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ message: "Access denied: not admin" });
-
     const { id } = req.params;
-    const user = await User.findById(id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const tenantId = req.user.tenantId;
+
+    const user = await User.findOne({
+      _id: id,
+      selectedHospitalTenantId: tenantId
+    });
+
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
 
     await User.findByIdAndDelete(id);
-    res.status(200).json({ message: "User deleted successfully" });
+
+    res.json({ message: "User deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
+/**
+ * CREATE CATEGORY (TENANT SCOPED)
+ */
 export const createCategory = async (req, res) => {
   try {
-    if (req.user.role !== "admin")
-      return res.status(403).json({ message: "Access denied: not admin" });
-
-    const { name, description } = req.body;
-    if (!name) return res.status(400).json({ message: "Category name is required" });
-
-    const category = new Category({ name, description });
-    await category.save();
-
-    res.status(201).json({ message: "Category created", category });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// Get all categories
-export const getAllCategories = async (req, res) => {
-  try {
-    const categories = await Category.find().sort({ createdAt: -1 });
-    res.status(200).json(categories);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// Update category
-export const updateCategory = async (req, res) => {
-  try {
-    if (req.user.role !== "admin")
-      return res.status(403).json({ message: "Access denied: not admin" });
-
-    const { id } = req.params;
+    const tenantId = req.user.tenantId;
     const { name, description } = req.body;
 
-    const updatedCategory = await Category.findByIdAndUpdate(
-      id,
-      { name, description },
-      { new: true }
+    const hospital = await Hospital.findOne({ tenantId });
+    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+
+    // Prevent duplicate
+    const exists = hospital.categories.find(
+      (c) => c.name.toLowerCase() === name.toLowerCase()
     );
 
-    if (!updatedCategory) return res.status(404).json({ message: "Category not found" });
+    if (exists)
+      return res.status(400).json({ message: "Category already exists" });
 
-    res.status(200).json({ message: "Category updated", category: updatedCategory });
+    // CREATE NEW CATEGORY WITH _id
+    const newCategory = {
+      name,
+      description
+    };
+
+    hospital.categories.push(newCategory);
+    await hospital.save();
+
+    const added = hospital.categories[hospital.categories.length - 1]; // latest category with _id
+
+    res.status(201).json({ message: "Category added", category: added });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Delete category
-export const deleteCategory = async (req, res) => {
+export const updateCategory = async (req, res) => {
   try {
-    if (req.user.role !== "admin")
-      return res.status(403).json({ message: "Access denied: not admin" });
-
+    const tenantId = req.user.tenantId;
     const { id } = req.params;
-    const category = await Category.findById(id);
+    const { name, description } = req.body;
+
+    const hospital = await Hospital.findOne({ tenantId });
+    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+
+    const category = hospital.categories.id(id);
     if (!category) return res.status(404).json({ message: "Category not found" });
 
-    await Category.findByIdAndDelete(id);
-    res.status(200).json({ message: "Category deleted" });
+    category.name = name || category.name;
+    category.description = description || category.description;
+
+    await hospital.save();
+
+    res.json({ message: "Category updated", category });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Tickets & Contacts
+
+
+
+/**
+ * GET CATEGORIES (TENANT FILTERED)
+ */
+export const getAllCategories = async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId;
+
+    const hospital = await Hospital.findOne({ tenantId });
+    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+
+    res.json(hospital.categories);
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+/**
+ * UPDATE CATEGORY
+ */
+export const deleteCategory = async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId;
+    const { id } = req.params;
+
+    const hospital = await Hospital.findOne({ tenantId });
+    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+
+    hospital.categories = hospital.categories.filter(
+      (cat) => cat._id.toString() !== id
+    );
+
+    await hospital.save();
+
+    res.json({ message: "Category deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * ============================
+ *  GET ALL TICKETS
+ * ============================
+ */
 export const getAllTickets = async (req, res) => {
   try {
-    if (req.user.role !== "admin") return res.status(403).json({ message: "Access denied" });
+    if (req.user.role !== "admin")
+      return res.status(403).json({ message: "Access denied" });
 
-    const users = await User.find().select("name email supportTickets");
+    const tenantId = req.user.tenantId;
+
+    const users = await User.find({
+      selectedHospitalTenantId: tenantId
+    }).select("name email supportTickets");
+
     const tickets = users.flatMap(user =>
       (user.supportTickets || []).map(ticket => ({
         ...ticket.toObject(),
         user: { name: user.name, email: user.email }
       }))
     );
+
     res.json(tickets);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
+/**
+ * ============================
+ *  REPLY TO TICKET (ADMIN)
+ * ============================
+ */
+export const replyToTicket = async (req, res) => {
+  try {
+    const { userId, ticketId, reply } = req.body;
+
+    if (!reply || !ticketId || !userId) {
+      return res.status(400).json({ message: "Missing details" });
+    }
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
+
+    // Find ticket
+    const ticket = user.supportTickets.id(ticketId);
+    if (!ticket)
+      return res.status(404).json({ message: "Ticket not found" });
+
+    // Update ticket
+    ticket.reply = reply;
+    ticket.status = "closed";
+    ticket.replyAt = new Date();
+
+    await user.save();
+
+    res.json({
+      message: "Reply sent and ticket closed",
+      ticket
+    });
+
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};

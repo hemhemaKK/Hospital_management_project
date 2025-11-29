@@ -18,7 +18,7 @@ exports.sendOtp = async (req, res) => {
     const url = `https://2factor.in/API/V1/${API_KEY}/SMS/+91${phone}/AUTOGEN`;
     const response = await axios.get(url);
 
-    otpSessionStore[phone] = response.data.Details; // store session_id
+    otpSessionStore[phone] = response.data.Details;
     res.json({ msg: "OTP sent via SMS", sessionId: otpSessionStore[phone] });
   } catch (err) {
     console.error(err.response?.data || err.message);
@@ -40,15 +40,18 @@ exports.verifyOtp = async (req, res) => {
 
     if (response.data.Status === "Success") {
       const user = await User.findById(req.user._id);
+
       user.phone = phone;
       user.isPhoneVerified = true;
       await user.save();
 
       delete otpSessionStore[phone];
+
       return res.json({ msg: "Phone verified successfully" });
     }
 
     return res.status(400).json({ msg: "Invalid OTP" });
+
   } catch (err) {
     console.error(err.response?.data || err.message);
     return res.status(500).json({ msg: "OTP verification failed" });
@@ -59,15 +62,19 @@ exports.verifyOtp = async (req, res) => {
 exports.updateProfilePic = async (req, res) => {
   try {
     const { imageUrl } = req.body;
-    if (!imageUrl) return res.status(400).json({ msg: "Image URL is required" });
 
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ msg: "User not found" });
+    if (!imageUrl)
+      return res.status(400).json({ msg: "Image URL is required" });
+
+    // FIXED: use req.user._id not req.user.id
+    const user = await User.findById(req.user._id);
+
+    if (!user)
+      return res.status(404).json({ msg: "User not found" });
 
     user.profilePic = imageUrl;
     await user.save();
 
-    // Return updated user object
     res.json({
       _id: user._id,
       email: user.email,
@@ -75,9 +82,9 @@ exports.updateProfilePic = async (req, res) => {
       isPhoneVerified: user.isPhoneVerified,
       profilePic: user.profilePic,
     });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Failed to update profile picture" });
   }
 };
-

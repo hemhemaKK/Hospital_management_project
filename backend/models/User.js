@@ -1,4 +1,3 @@
-// models/User.js
 const mongoose = require("mongoose");
 
 const reviewSchema = new mongoose.Schema({
@@ -26,17 +25,21 @@ const userSchema = new mongoose.Schema(
 
     email: { type: String, unique: true },
     password: String,
-    otp: Number,
-    isVerified: { type: Boolean, default: false },
 
     googleId: String,
 
-    // Corrected roles
+    otp: Number,
+    isVerified: { type: Boolean, default: false },
+
+    phone: { type: String, default: "" },
+    isPhoneVerified: { type: Boolean, default: false },
+
+    profilePic: { type: String, default: "" },
+
     role: {
       type: String,
       enum: [
         "superadmin",
-        "admin",
         "doctor",
         "nurse",
         "receptionist",
@@ -46,52 +49,35 @@ const userSchema = new mongoose.Schema(
       default: "user"
     },
 
-    profilePic: { type: String, default: "" },
-    phone: { type: String, default: "" },
-    isPhoneVerified: { type: Boolean, default: false },
-    isApproved: { type: Boolean, default: false },
-
-    /* ------------------------------------------------------------------
-       HOSPITAL ADMIN RELATED FIELDS
-    ------------------------------------------------------------------ */
-
-    isHospital: { type: Boolean, default: false },
-
-    hospitalName: { type: String },
-    address: { type: String },
-    licenseNumber: { type: String, unique: true, sparse: true },
-    hospitalPhone: { type: String },
-
-    hospitalStatus: {
+   
+    status: {
       type: String,
-      enum: ["PENDING", "VERIFIED", "ACTIVE", "SUSPENDED", "INACTIVE"],
-      default: "PENDING"
+      enum: ["ACTIVE", "INACTIVE", "LOCKED", "PASSWORD_EXPIRED"],
+      default: "ACTIVE"
     },
 
-    
-    /* ------------------------------------------------------------------
-       DOCTOR RELATED FIELDS
-    ------------------------------------------------------------------ */
+    passwordHistory: [{ type: String }],
 
+    // ⭐ USER SELECTS A HOSPITAL DURING REGISTER
     selectedHospital: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // hospital admin
+      ref: "Hospital",
       default: null
     },
+
+    selectedHospitalTenantId: {
+      type: String,
+      default: null
+    },
+    reviews: [reviewSchema],
+    hasReviewed: { type: Boolean, default: false },
+
+    supportTickets: [ticketSchema],
 
     selectedCategory: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      default: null
-    },
-
-    /* ------------------------------------------------------------------
-       FEATURES
-    ------------------------------------------------------------------ */
-
-    reviews: [reviewSchema],
-    supportTickets: [ticketSchema],
-    hasReviewed: { type: Boolean, default: false }
+      ref: "Hospital"
+    }
   },
   { timestamps: true }
 );

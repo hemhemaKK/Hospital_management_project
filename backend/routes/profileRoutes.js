@@ -7,7 +7,8 @@ const profileController = require('../controllers/profileController')
 // GET profile (already exists)
 router.get("/", requireAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password -otp");
+    console.log(req.user.id)
+    const user = await User.findById(req.user._id).select("-password -otp");
     res.json({ user });
   } catch (err) {
     res.status(500).json({ msg: "Server error", error: err.message });

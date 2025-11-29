@@ -1,9 +1,11 @@
 import mongoose from "mongoose";
 
 const categorySchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
   description: { type: String },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Admin or Employee who created
+
+  tenantId: { type: String, required: true },   // ⭐ ADDED
+
   createdAt: { type: Date, default: Date.now }
 });
 

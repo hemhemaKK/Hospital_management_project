@@ -15,10 +15,6 @@ export default function DoctorDashboard() {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [user, setUser] = useState(null);
 
-  // NEW STATES
-  const [hospitals, setHospitals] = useState([]);
-  const [selectedHospitalId, setSelectedHospitalId] = useState("");
-
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
@@ -31,21 +27,12 @@ export default function DoctorDashboard() {
 
     const fetchData = async () => {
       try {
-        // doctor info
         const resUser = await axios.get(`${BASE_URL}/doctor/dashboard`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         const doctor = resUser.data.user;
         setUser(doctor);
-
-        // Load hospitals if not selected
-        if (!doctor.selectedHospital) {
-          const resHospitals = await axios.get(`${BASE_URL}/superadmin/hospitals/list`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          setHospitals(resHospitals.data);
-        }
 
         // Load categories if not selected
         if (!doctor.selectedCategory) {
@@ -79,16 +66,14 @@ export default function DoctorDashboard() {
     navigate("/login");
   };
 
-  // NEW ---> SELECT HOSPITAL + CATEGORY
-  const chooseHospitalCategory = async () => {
-    if (!selectedHospitalId) return alert("Please select a hospital!");
-    if (!selectedCategoryId) return alert("Please select a category!");
+  // NEW ---> SELECT CATEGORY ONLY (HOSPITAL REMOVED)
+  const chooseCategory = async () => {
+    if (!selectedCategoryId) return alert("Please select a department!");
 
     try {
       await axios.put(
-        `${BASE_URL}/doctor/choose-hospital-category`,
+        `${BASE_URL}/doctor/choose-category`,
         {
-          hospitalId: selectedHospitalId,
           categoryId: selectedCategoryId,
         },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -100,10 +85,10 @@ export default function DoctorDashboard() {
       });
 
       setUser(resUser.data.user);
-      alert("Hospital & Category selected! Wait for admin approval.");
+      alert("Department selected! Wait for admin approval.");
     } catch (err) {
       console.error(err);
-      alert("Failed to select hospital & category");
+      alert("Failed to select department");
     }
   };
 
@@ -128,10 +113,10 @@ export default function DoctorDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // refresh
       const resNurses = await axios.get(`${BASE_URL}/doctor/nurse`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       setNurses(resNurses.data);
 
       alert(`Nurse ${action} successful`);
@@ -206,49 +191,30 @@ export default function DoctorDashboard() {
   // UI: Dashboard main
   const renderDashboard = () => (
     <div>
-      {/* If doctor has NOT selected BOTH hospital + category */}
-      {(!user.selectedHospital || !user.selectedCategory) && (
+      {/* If doctor has NOT selected category */}
+      {!user.selectedCategory && (
         <div style={{ marginTop: "20px" }}>
-          {/* Hospital dropdown */}
-          {!user.selectedHospital && (
-            <select
-              style={selectStyle}
-              value={selectedHospitalId}
-              onChange={(e) => setSelectedHospitalId(e.target.value)}
-            >
-              <option value="">Select Hospital</option>
-              {hospitals.map((h) => (
-                <option key={h._id} value={h._id}>
-                  {h.hospitalName} - {h.address}
-                </option>
-              ))}
-            </select>
-          )}
+          <select
+            style={selectStyle}
+            value={selectedCategoryId}
+            onChange={(e) => setSelectedCategoryId(e.target.value)}
+          >
+            <option value="">Select Department</option>
+            {categories.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
 
-          {/* Category dropdown */}
-          {!user.selectedCategory && (
-            <select
-              style={selectStyle}
-              value={selectedCategoryId}
-              onChange={(e) => setSelectedCategoryId(e.target.value)}
-            >
-              <option value="">Select Department</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          <button onClick={chooseHospitalCategory} style={chooseBtnStyle}>
+          <button onClick={chooseCategory} style={chooseBtnStyle}>
             Submit
           </button>
         </div>
       )}
 
-      {/* Already selected hospital + category */}
-      {user.selectedHospital && user.selectedCategory && (
+      {/* After category selection */}
+      {user.selectedCategory && (
         <>
           {!user.isApproved && (
             <p style={{ color: "orange", marginTop: "20px" }}>

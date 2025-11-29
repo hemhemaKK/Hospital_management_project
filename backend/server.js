@@ -16,6 +16,7 @@ const employeeRoutes = require("./routes/doctorRoutes")
 const complaintsRoutes = require("./routes/complaintRoutes")
 const chatbotRoutes = require("./routes/chatRoutes")
 const superadminRoutes = require("./routes/superadminRoutes")
+const hospitalRoutes = require("./routes/hospitalRoutes");
 
 const app = express();
 
@@ -23,22 +24,17 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: function (origin, callback) {
-      const allowedOrigins = [
-        "https://improve-my-city-frontend-r5qi.vercel.app",
-        "http://localhost:3000",
-      ];
-
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // <-- added PATCH
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"], // ADD THIS!
   })
 );
+
 
 app.use(cookieParser());
 app.use(passport.initialize());
@@ -54,6 +50,7 @@ app.use("/api/complaints", complaintsRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 
 app.use("/api/superadmin", superadminRoutes)
+app.use("/api/hospital", hospitalRoutes);
 
 
 // Root route

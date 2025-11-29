@@ -1,85 +1,118 @@
 const User = require("../models/User");
+const Hospital = require("../models/Hospital");
 
-// simple check
+// Permission check
 const isSuperAdmin = (role) => role === "superadmin";
 
 
-// ---------------- GET ALL ADMINS ----------------
-exports.getAllAdmins = async (req, res) => {
+// ------------------------------------------------------
+// 1. GET ALL HOSPITALS + USERS UNDER EACH
+// ------------------------------------------------------
+exports.getAllHospitals = async (req, res) => {
   try {
-    if (!isSuperAdmin(req.user.role))
-      return res.status(403).json({ msg: "Access denied: Only superadmin" });
+    if (!isSuperAdmin(req.user.role)) {
+      return res.status(403).json({ msg: "Only superadmin allowed" });
+    }
 
-    const admins = await User.find({ role: "admin" }).select("-password -otp");
-    res.json(admins);
+    // Fetch all hospitals
+    const hospitals = await Hospital.find().select("-__v").lean();
+
+    // For each hospital → fetch users belonging to it
+    for (let h of hospitals) {
+      h.users = await User.find({ hospitalId: h._id })
+        .select("firstName lastName email role")
+        .lean();
+    }
+
+    return res.json({ hospitals });
   } catch (err) {
+    console.error("Error fetching hospitals:", err);
     res.status(500).json({ msg: err.message });
   }
 };
 
-// ---------------- UPDATE ADMIN ----------------
-exports.updateAdmin = async (req, res) => {
+
+
+// ------------------------------------------------------
+// 2. UPDATE HOSPITAL (Only name can be changed)
+// ------------------------------------------------------
+exports.updateHospital = async (req, res) => {
   try {
-    if (!isSuperAdmin(req.user.role))
-      return res.status(403).json({ msg: "Only superadmin can update admins" });
+    if (!isSuperAdmin(req.user.role)) {
+      return res.status(403).json({ msg: "Only superadmin allowed" });
+    }
 
     const { id } = req.params;
-    const { name, email } = req.body;
+    const { name } = req.body;
 
-    const updated = await User.findByIdAndUpdate(
-      id,
-      { name, email },
-      { new: true }
-    ).select("-password");
+    const hospital = await Hospital.findById(id);
+    if (!hospital) {
+      return res.status(404).json({ msg: "Hospital not found" });
+    }
 
-    if (!updated) return res.status(404).json({ msg: "Admin not found" });
+    if (!name) {
+      return res
+        .status(400)
+        .json({ msg: "Only hospital name can be updated" });
+    }
 
-    res.json({ msg: "Admin updated", admin: updated });
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
-  }
-};
-
-// ---------------- ENABLE / DISABLE ADMIN ----------------
-exports.toggleAdmin = async (req, res) => {
-  try {
-    if (!isSuperAdmin(req.user.role))
-      return res.status(403).json({ msg: "Only superadmin can toggle admin status" });
-
-    const { id } = req.params;
-    const admin = await User.findById(id);
-
-    if (!admin || admin.role !== "admin")
-      return res.status(404).json({ msg: "Admin not found" });
-
-    admin.isApproved = !admin.isApproved;
-    await admin.save();
-
-    res.json({
-      msg: admin.isApproved ? "Admin enabled" : "Admin disabled",
-      admin
+    // Prevent duplicate hospital names
+    const nameTaken = await Hospital.findOne({
+      name,
+      _id: { $ne: id },
     });
+
+    if (nameTaken) {
+      return res.status(400).json({ msg: "Hospital name already exists" });
+    }
+
+    hospital.name = name;
+    await hospital.save();
+
+    return res.json({
+      msg: "Hospital name updated successfully",
+      hospital,
+    });
+
   } catch (err) {
+    console.error("Error updating hospital:", err);
     res.status(500).json({ msg: err.message });
   }
 };
 
-// ---------------- DELETE ADMIN ----------------
-exports.deleteAdmin = async (req, res) => {
+
+
+// ------------------------------------------------------
+// 3. DELETE HOSPITAL (Only if no users exist)
+// ------------------------------------------------------
+exports.deleteHospital = async (req, res) => {
   try {
-    if (!isSuperAdmin(req.user.role))
-      return res.status(403).json({ msg: "Only superadmin can delete admins" });
+    if (!isSuperAdmin(req.user.role)) {
+      return res.status(403).json({ msg: "Only superadmin allowed" });
+    }
 
     const { id } = req.params;
 
-    const admin = await User.findById(id);
-    if (!admin || admin.role !== "admin")
-      return res.status(404).json({ msg: "Admin not found" });
+    const hospital = await Hospital.findById(id);
+    if (!hospital) {
+      return res.status(404).json({ msg: "Hospital not found" });
+    }
 
-    await User.findByIdAndDelete(id);
+    // Check if users belong to this hospital
+    const usersExist = await User.find({ hospitalId: id }).countDocuments();
 
-    res.json({ msg: "Admin deleted successfully" });
+    if (usersExist > 0) {
+      return res.status(400).json({
+        msg: "Cannot delete hospital while users exist under it",
+      });
+    }
+
+    await Hospital.findByIdAndDelete(id);
+
+    return res.json({ msg: "Hospital deleted successfully" });
+
   } catch (err) {
+    console.error("Error deleting hospital:", err);
     res.status(500).json({ msg: err.message });
   }
 };
