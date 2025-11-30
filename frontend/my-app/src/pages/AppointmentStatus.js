@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode"; // ✅ Correct import
+import { jwtDecode } from "jwt-decode"; // ✅ Named import
 
 const BASE_URL = "http://localhost:5000";
 
@@ -13,24 +13,19 @@ export default function AppointmentStatus() {
   try {
     if (token) {
       const decoded = jwtDecode(token); // decode token
-      userId = decoded.id || decoded._id; // adjust depending on your token payload
+      userId = decoded.id || decoded._id;
     }
   } catch (err) {
     console.error("Token decode error:", err);
   }
 
-  /* ---------------------- Load Appointments ---------------------- */
   const loadAppointments = async () => {
     if (!token || !userId) return;
-
     setLoading(true);
     try {
-      const res = await axios.get(
-        `${BASE_URL}/api/appointment/user/${userId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await axios.get(`${BASE_URL}/api/appointment/user/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setAppointments(res.data || []);
     } catch (err) {
       console.error("Error loading appointments:", err);
@@ -43,23 +38,13 @@ export default function AppointmentStatus() {
     loadAppointments();
   }, [userId]);
 
-  /* ---------------------- Cancel Appointment ---------------------- */
   const handleCancel = async (appointmentId) => {
-    if (!window.confirm("Are you sure you want to cancel this appointment?"))
-      return;
-
+    if (!window.confirm("Are you sure you want to cancel this appointment?")) return;
     try {
-      await axios.delete(
-        `${BASE_URL}/api/appointment/${userId}/${appointmentId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      setAppointments((prev) =>
-        prev.filter((a) => a._id !== appointmentId)
-      );
-
+      await axios.delete(`${BASE_URL}/api/appointment/${userId}/${appointmentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAppointments((prev) => prev.filter((a) => a._id !== appointmentId));
       alert("Appointment cancelled");
     } catch (err) {
       console.error("Cancel failed:", err);
@@ -67,11 +52,26 @@ export default function AppointmentStatus() {
     }
   };
 
-  /* ---------------------------- UI ---------------------------- */
+  const renderStatus = (status) => {
+    let color = "#777";
+    switch (status) {
+      case "PENDING": color = "#f39c12"; break;
+      case "DOCTOR_ACCEPTED": color = "#3498db"; break;
+      case "NURSE_ASSIGNED": color = "#9b59b6"; break;
+      case "NURSE_COMPLETED": color = "#1abc9c"; break;
+      case "DOCTOR_COMPLETED": color = "#2ecc71"; break;
+      case "REJECTED": color = "#e74c3c"; break;
+    }
+    return (
+      <span style={{ padding: "4px 8px", borderRadius: 4, backgroundColor: color, color: "#fff", fontSize: 12 }}>
+        {status.replace("_", " ")}
+      </span>
+    );
+  };
+
   return (
     <div style={{ marginTop: 20 }}>
       <h3>My Appointments</h3>
-
       {loading ? (
         <p>Loading appointments...</p>
       ) : appointments.length === 0 ? (
@@ -88,35 +88,18 @@ export default function AppointmentStatus() {
               <th style={thStyle}>Action</th>
             </tr>
           </thead>
-
           <tbody>
             {appointments.map((a) => (
               <tr key={a._id} style={{ borderBottom: "1px solid #eee" }}>
-                <td style={tdStyle}>
-                  {a.doctor?.name ||
-                    `${a.doctor?.firstName || ""} ${
-                      a.doctor?.lastName || ""
-                    }`.trim()}
-                </td>
-
+                <td style={tdStyle}>{a.doctor?.name || `${a.doctor?.firstName || ""} ${a.doctor?.lastName || ""}`.trim()}</td>
                 <td style={tdStyle}>{a.category?.name || "-"}</td>
-
                 <td style={tdStyle}>{a.date}</td>
                 <td style={tdStyle}>{a.time}</td>
-
-                <td style={tdStyle}>{a.status}</td>
-
+                <td style={tdStyle}>{renderStatus(a.status)}</td>
                 <td style={tdStyle}>
-                  {a.status === "PENDING" || a.status === "booked" ? (
-                    <button
-                      onClick={() => handleCancel(a._id)}
-                      style={cancelBtn}
-                    >
-                      Cancel
-                    </button>
-                  ) : (
-                    "-"
-                  )}
+                  {["PENDING", "DOCTOR_ACCEPTED", "NURSE_ASSIGNED"].includes(a.status) ? (
+                    <button onClick={() => handleCancel(a._id)} style={cancelBtn}>Cancel</button>
+                  ) : "-"}
                 </td>
               </tr>
             ))}
@@ -127,15 +110,6 @@ export default function AppointmentStatus() {
   );
 }
 
-/* ------------------------ Styles ------------------------ */
 const thStyle = { padding: 10, textAlign: "left", fontSize: 14 };
 const tdStyle = { padding: 10, fontSize: 13 };
-
-const cancelBtn = {
-  padding: "6px 8px",
-  borderRadius: 6,
-  border: "none",
-  background: "#e74c3c",
-  color: "#fff",
-  cursor: "pointer",
-};
+const cancelBtn = { padding: "6px 12px", borderRadius: 6, border: "none", background: "#e74c3c", color: "#fff", cursor: "pointer" };
