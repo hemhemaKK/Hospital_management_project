@@ -1,4 +1,3 @@
-// src/pages/DoctorDashboard.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -15,41 +14,71 @@ export default function DoctorDashboard() {
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
-  const [nurses, setNurses] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // UI states
+  const [expandedAppts, setExpandedAppts] = useState({}); // appointmentId -> bool
+  const [presInputs, setPresInputs] = useState({}); // appointmentId -> { medicineName, dosage, duration, notes }
+  const [actionLoading, setActionLoading] = useState({}); // appointmentId -> bool
+
   /* ------------------------------------------
-        LOAD DASHBOARD DATA
+     Helper: Axios headers
+  ------------------------------------------- */
+  const authHeaders = () => ({ headers: { Authorization: `Bearer ${token}` } });
+
+  /* ------------------------------------------
+     AUTO REFRESH APPOINTMENTS (2s)
+  ------------------------------------------- */
+  useEffect(() => {
+    if (!token) return;
+
+    let mounted = true;
+    const fetchAppts = async () => {
+      try {
+        const res = await axios.get(`${BASE_URL}/appointment/appointments`, authHeaders());
+        if (mounted) setAppointments(res.data);
+      } catch (err) {
+        console.error("Auto refresh error", err);
+      }
+    };
+
+    fetchAppts();
+    const interval = setInterval(fetchAppts, 2000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [token]);
+
+  /* ------------------------------------------
+     LOAD INITIAL DATA (once)
   ------------------------------------------- */
   useEffect(() => {
     if (!token) return;
 
     const loadData = async () => {
       try {
-        const resUser = await axios.get(`${BASE_URL}/doctor/dashboard`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const [resUser, resCat, resAppt] = await Promise.all([
+          axios.get(`${BASE_URL}/doctor/dashboard`, authHeaders()),
+          axios.get(`${BASE_URL}/doctor/categories`, authHeaders()),
+          axios.get(`${BASE_URL}/appointment/appointments`, authHeaders()),
+        ]);
+
         setUser(resUser.data.user);
+        setCategories(resCat.data || []);
+        setAppointments(resAppt.data || []);
 
-        const resCat = await axios.get(`${BASE_URL}/doctor/categories`, {
-          headers: { Authorization: `Bearer ${token}` },
+        // initialize prescription inputs for existing appointments (optional)
+        const initInputs = {};
+        (resAppt.data || []).forEach((a) => {
+          initInputs[a._id] = { medicineName: "", dosage: "", duration: "", notes: "" };
         });
-        setCategories(resCat.data);
-
-        const resNurse = await axios.get(`${BASE_URL}/doctor/nurse`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setNurses(resNurse.data);
-
-        const resAppt = await axios.get(`${BASE_URL}/appointment/appointments`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setAppointments(resAppt.data);
+        setPresInputs(initInputs);
 
         setLoading(false);
       } catch (err) {
-        console.error(err);
+        console.error("Error loading dashboard:", err);
         alert("Error loading dashboard");
       }
     };
@@ -58,7 +87,7 @@ export default function DoctorDashboard() {
   }, [token]);
 
   /* ------------------------------------------
-        LOGOUT
+     LOGOUT
   ------------------------------------------- */
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -66,24 +95,14 @@ export default function DoctorDashboard() {
   };
 
   /* ------------------------------------------
-        DOCTOR SELECT CATEGORY
+     SELECT CATEGORY (doctor)
   ------------------------------------------- */
   const chooseCategory = async () => {
     if (!selectedCategoryId) return alert("Select a department");
-
     try {
-      await axios.put(
-        `${BASE_URL}/doctor/choose-category`,
-        { categoryId: selectedCategoryId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
+      await axios.put(`${BASE_URL}/doctor/choose-category`, { categoryId: selectedCategoryId }, authHeaders());
       alert("Category selected. Wait for admin approval.");
-
-      const resUser = await axios.get(`${BASE_URL}/doctor/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const resUser = await axios.get(`${BASE_URL}/doctor/dashboard`, authHeaders());
       setUser(resUser.data.user);
     } catch (err) {
       console.error(err);
@@ -92,81 +111,126 @@ export default function DoctorDashboard() {
   };
 
   /* ------------------------------------------
-        NURSE ACTIONS
+     Toggle expanded appointment UI
   ------------------------------------------- */
-  const handleNurseAction = async (id, action) => {
-    try {
-      let url = "";
-      let method = "put";
-
-      if (action === "approve")
-        url = `${BASE_URL}/doctor/nurse/approve/${id}`;
-      else if (action === "disapprove")
-        url = `${BASE_URL}/doctor/nurse/disapprove/${id}`;
-      else {
-        url = `${BASE_URL}/doctor/nurse/reject/${id}`;
-        method = "delete";
-      }
-
-      await axios({
-        url,
-        method,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      // refresh nurse list
-      const updated = await axios.get(`${BASE_URL}/doctor/nurse`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setNurses(updated.data);
-    } catch (err) {
-      console.error(err);
-      alert("Error updating nurse");
+  const toggleExpand = (id) => {
+    setExpandedAppts((s) => ({ ...s, [id]: !s[id] }));
+    if (!presInputs[id]) {
+      setPresInputs((p) => ({ ...p, [id]: { medicineName: "", dosage: "", duration: "", notes: "" } }));
     }
   };
 
   /* ------------------------------------------
-        UPDATE APPOINTMENT
-        payload example: { action: 'accept' } OR { action: 'assign_nurse', nurseId }
+     Prescription input handler
+  ------------------------------------------- */
+  const handlePresChange = (apptId, field, value) => {
+    setPresInputs((p) => ({ ...p, [apptId]: { ...(p[apptId] || {}), [field]: value } }));
+  };
+
+  /* ------------------------------------------
+     Update appointment helper (generic)
+     - payload: { action: 'add_prescription' | 'complete' | 'accept' | 'reject', prescription?, ... }
   ------------------------------------------- */
   const updateAppointment = async (id, payload) => {
+    setActionLoading((s) => ({ ...s, [id]: true }));
     try {
-      await axios.put(
-        `${BASE_URL}/appointment/appointment/${id}`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // refresh appointment list after update
-      const refreshed = await axios.get(`${BASE_URL}/appointment/appointments`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setAppointments(refreshed.data);
-
-      // if assigning nurse or nurse approvals changed, refresh nurses too
-      if (payload?.action === "assign_nurse") {
-        const resNurse = await axios.get(`${BASE_URL}/doctor/nurse`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setNurses(resNurse.data);
-      }
+      await axios.put(`${BASE_URL}/appointment/appointment/${id}`, payload, authHeaders());
+      // refresh appointments once done
+      const refreshed = await axios.get(`${BASE_URL}/appointment/appointments`, authHeaders());
+      setAppointments(refreshed.data || []);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to update appointment", err);
       alert("Failed to update appointment");
+    } finally {
+      setActionLoading((s) => ({ ...s, [id]: false }));
     }
   };
 
   /* ------------------------------------------
-        CATEGORY SELECT UI
+     Add prescription only (doctor)
+  ------------------------------------------- */
+  const addPrescription = async (apptId) => {
+    const inputs = presInputs[apptId] || {};
+    if (!inputs.medicineName?.trim() || !inputs.dosage?.trim() || !inputs.duration?.trim()) {
+      return alert("Please enter medicine name, dosage and duration");
+    }
+    const prescription = {
+      medicineName: inputs.medicineName.trim(),
+      dosage: inputs.dosage.trim(),
+      duration: inputs.duration.trim(),
+      notes: inputs.notes?.trim() || "",
+    };
+
+    await updateAppointment(apptId, { action: "add_prescription", prescription });
+    // clear the inputs for that appointment
+    setPresInputs((p) => ({ ...p, [apptId]: { medicineName: "", dosage: "", duration: "", notes: "" } }));
+  };
+
+  /* ------------------------------------------
+     Add prescription AND mark complete (doctor immediate flow)
+     - This will add prescription first, then mark appointment complete
+  ------------------------------------------- */
+  const addPrescriptionAndComplete = async (apptId) => {
+    const inputs = presInputs[apptId] || {};
+    if (!inputs.medicineName?.trim() || !inputs.dosage?.trim() || !inputs.duration?.trim()) {
+      return alert("Please enter medicine name, dosage and duration");
+    }
+    const prescription = {
+      medicineName: inputs.medicineName.trim(),
+      dosage: inputs.dosage.trim(),
+      duration: inputs.duration.trim(),
+      notes: inputs.notes?.trim() || "",
+    };
+
+    // add prescription
+    setActionLoading((s) => ({ ...s, [apptId]: true }));
+    try {
+      await axios.put(`${BASE_URL}/appointment/appointment/${apptId}`, { action: "add_prescription", prescription }, authHeaders());
+      // now complete
+      await axios.put(`${BASE_URL}/appointment/appointment/${apptId}`, { action: "complete" }, authHeaders());
+
+      // refresh
+      const refreshed = await axios.get(`${BASE_URL}/appointment/appointments`, authHeaders());
+      setAppointments(refreshed.data || []);
+      setPresInputs((p) => ({ ...p, [apptId]: { medicineName: "", dosage: "", duration: "", notes: "" } }));
+    } catch (err) {
+      console.error("Error add+complete", err);
+      alert("Failed to add prescription and complete");
+    } finally {
+      setActionLoading((s) => ({ ...s, [apptId]: false }));
+    }
+  };
+
+  /* ------------------------------------------
+     Direct complete (doctor), allowed if any prescription exists OR confirm without prescription
+  ------------------------------------------- */
+  const directComplete = async (appt) => {
+    if (!Array.isArray(appt.prescription) || appt.prescription.length === 0) {
+      const ok = window.confirm("No prescription exists for this appointment. Do you want to mark it complete without a prescription?");
+      if (!ok) return;
+    }
+
+    await updateAppointment(appt._id, { action: "complete" });
+  };
+
+  /* ------------------------------------------
+     Simple accept / reject actions (doctor)
+  ------------------------------------------- */
+  const acceptAppointment = async (id) => {
+    await updateAppointment(id, { action: "accept" });
+  };
+  const rejectAppointment = async (id) => {
+    const ok = window.confirm("Are you sure you want to reject this appointment?");
+    if (!ok) return;
+    await updateAppointment(id, { action: "reject" });
+  };
+
+  /* ------------------------------------------
+     UI RENDER: Category selection (if doctor not selected)
   ------------------------------------------- */
   const renderCategorySelection = () => (
     <div style={{ marginTop: "20px" }}>
-      <select
-        style={selectStyle}
-        value={selectedCategoryId}
-        onChange={(e) => setSelectedCategoryId(e.target.value)}
-      >
+      <select style={selectStyle} value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)}>
         <option value="">Select Department</option>
         {categories.map((c) => (
           <option key={c._id} value={c._id}>
@@ -175,224 +239,171 @@ export default function DoctorDashboard() {
         ))}
       </select>
 
-      <button onClick={chooseCategory} style={chooseBtnStyle}>
-        Submit
-      </button>
+      <button onClick={chooseCategory} style={chooseBtnStyle}>Submit</button>
     </div>
   );
 
   /* ------------------------------------------
-        NURSE TABLE
-  ------------------------------------------- */
-  const renderNurseTable = () => (
-    <table style={tableStyle}>
-      <thead>
-        <tr>
-          <th style={thStyle}>Name</th>
-          <th style={thStyle}>Email</th>
-          <th style={thStyle}>Phone</th>
-          <th style={thStyle}>Status</th>
-          <th style={thStyle}>Actions</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {nurses.map((n, i) => (
-          <tr key={n._id} style={trStyle(i)}>
-            <td style={tdStyle}>{n.name}</td>
-            <td style={tdStyle}>{n.email}</td>
-            <td style={tdStyle}>{n.phone || "-"}</td>
-            <td style={tdStyle}>{n.isVerified ? "Approved" : "Pending"}</td>
-
-            <td style={tdStyle}>
-              {!n.isVerified ? (
-                <>
-                  <button
-                    style={actionBtnStyle("green")}
-                    onClick={() => handleNurseAction(n._id, "approve")}
-                  >
-                    Approve
-                  </button>
-
-                  <button
-                    style={actionBtnStyle("red")}
-                    onClick={() => handleNurseAction(n._id, "reject")}
-                  >
-                    Reject
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    style={actionBtnStyle("orange")}
-                    onClick={() => handleNurseAction(n._id, "disapprove")}
-                  >
-                    Disapprove
-                  </button>
-
-                  <button
-                    style={actionBtnStyle("gray")}
-                    onClick={() => handleNurseAction(n._id, "delete")}
-                  >
-                    Delete
-                  </button>
-                </>
-              )}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-
-  /* ------------------------------------------
-        APPOINTMENT TABLE
+     APPOINTMENT TABLE (doctor-only flow)
   ------------------------------------------- */
   const renderAppointmentTable = () => (
-    <table style={tableStyle}>
-      <thead>
-        <tr>
-          <th style={thStyle}>Patient</th>
-          <th style={thStyle}>Date</th>
-          <th style={thStyle}>Time</th>
-          <th style={thStyle}>Nurse</th>
-          <th style={thStyle}>Status</th>
-          <th style={thStyle}>Action</th>
-        </tr>
-      </thead>
+    <div>
+      <table style={tableStyle}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Patient</th>
+            <th style={thStyle}>Date</th>
+            <th style={thStyle}>Time</th>
+            <th style={thStyle}>Nurse</th>
+            <th style={thStyle}>Status</th>
+            <th style={thStyle}>Action</th>
+          </tr>
+        </thead>
 
-      <tbody>
-        {appointments.length > 0 ? (
-          appointments.map((a, i) => (
-            <tr key={a._id} style={trStyle(i)}>
-              <td style={tdStyle}>{a.user?.name}</td>
-              <td style={tdStyle}>{a.date}</td>
-              <td style={tdStyle}>{a.time}</td>
+        <tbody>
+          {appointments.length > 0 ? (
+            appointments.map((a, i) => {
+              const expanded = !!expandedAppts[a._id];
+              const loadingThis = !!actionLoading[a._id];
+              const prescriptions = Array.isArray(a.prescription) ? a.prescription : [];
 
-              {/* Nurse Column */}
-              <td style={tdStyle}>
-                {a.nurse ? <b>{a.nurse.name}</b> : <i>Not Assigned</i>}
-              </td>
+              return (
+                <React.Fragment key={a._id}>
+                  <tr style={trStyle(i)}>
+                    <td style={tdStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ cursor: "pointer" }} onClick={() => toggleExpand(a._id)}>
+                          {expanded ? "▾" : "▸"}
+                        </div>
+                        <div>{a.user?.name}</div>
+                      </div>
+                    </td>
 
-              {/* Status */}
-              <td style={tdStyle}>
-                <span
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: "6px",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    background:
-                      a.status === "PENDING"
-                        ? "gray"
-                        : a.status === "DOCTOR_ACCEPTED"
-                        ? "green"
-                        : a.status === "NURSE_ASSIGNED"
-                        ? "blue"
-                        : a.status === "NURSE_COMPLETED"
-                        ? "orange"
-                        : a.status === "REJECTED"
-                        ? "red"
-                        : "#222",
-                  }}
-                >
-                  {a.status}
-                </span>
-              </td>
+                    <td style={tdStyle}>{a.date}</td>
+                    <td style={tdStyle}>{a.time}</td>
 
-              {/* ACTIONS */}
-              <td style={tdStyle}>
+                    {/* Nurse info (read-only in this doctor-only flow) */}
+                    <td style={tdStyle}>{a.nurse ? <b>{a.nurse.name}</b> : <i>Not Assigned</i>}</td>
 
-                {/* PENDING */}
-                {a.status === "PENDING" && (
-                  <>
-                    <button
-                      style={actionBtnStyle("green")}
-                      onClick={() => updateAppointment(a._id, { action: "accept" })}
-                    >
-                      Accept
-                    </button>
+                    {/* Status badge */}
+                    <td style={tdStyle}>
+                      <span style={{
+                        padding: "5px 10px",
+                        borderRadius: 6,
+                        color: "#fff",
+                        fontWeight: "bold",
+                        background:
+                          a.status === "PENDING" ? "gray" :
+                            a.status === "DOCTOR_ACCEPTED" ? "green" :
+                              a.status === "NURSE_ASSIGNED" ? "blue" :
+                                a.status === "NURSE_COMPLETED" ? "orange" :
+                                  a.status === "REJECTED" ? "red" : "#222"
+                      }}>
+                        {a.status}
+                      </span>
+                    </td>
 
-                    <button
-                      style={actionBtnStyle("red")}
-                      onClick={() => updateAppointment(a._id, { action: "reject" })}
-                    >
-                      Reject
-                    </button>
-                  </>
-                )}
+                    {/* Actions (doctor) */}
+                    <td style={tdStyle}>
+                      {/* Pending: accept / reject */}
+                      {a.status === "PENDING" && (
+                        <>
+                          <button style={actionBtnStyle("green")} onClick={() => acceptAppointment(a._id)} disabled={loadingThis}>
+                            Accept
+                          </button>
+                          <button style={actionBtnStyle("red")} onClick={() => rejectAppointment(a._id)} disabled={loadingThis}>
+                            Reject
+                          </button>
+                        </>
+                      )}
 
-                {/* ASSIGN NURSE */}
-                {a.status === "DOCTOR_ACCEPTED" && !a.nurse && (
-                  <select
-                    style={selectStyle}
-                    onChange={(e) =>
-                      updateAppointment(a._id, {
-                        action: "assign_nurse",
-                        nurseId: e.target.value,
-                      })
-                    }
-                    defaultValue=""
-                  >
-                    <option value="">Select Nurse</option>
-                    {nurses
-                      .filter((n) => n.isVerified)
-                      .map((n) => (
-                        <option key={n._id} value={n._id}>
-                          {n.name}
-                        </option>
-                      ))}
-                  </select>
-                )}
+                      {/* If accepted or nurse completed or already has prescription doctor can complete */}
+                      {a.status !== "PENDING" && a.status !== "REJECTED" && a.status !== "DOCTOR_COMPLETED" && (
+                        <>
+                          <button style={actionBtnStyle("green")} onClick={() => directComplete(a)} disabled={loadingThis}>
+                            Complete
+                          </button>
+                        </>
+                      )}
 
-                {/* Already Assigned Nurse */}
-                {a.status === "DOCTOR_ACCEPTED" && a.nurse && (
-                  <b style={{ color: "blue" }}>{a.nurse.name}</b>
-                )}
+                      {/* Completed */}
+                      {a.status === "DOCTOR_COMPLETED" && <span style={{ color: "green", fontWeight: "bold" }}>✔ Completed</span>}
+                    </td>
+                  </tr>
 
-                {/* Nurse Completed */}
-                {a.status === "NURSE_ASSIGNED" && (
-                  <button
-                    style={actionBtnStyle("orange")}
-                    onClick={() =>
-                      updateAppointment(a._id, { action: "nurse_complete" })
-                    }
-                  >
-                    Nurse Completed
-                  </button>
-                )}
+                  {/* Expanded row: description, prescriptions, add-prescription & add+complete */}
+                  {expanded && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 12, background: "#fbfbfb" }}>
+                        <div style={{ display: "flex", gap: 20, flexDirection: "column" }}>
+                          <div>
+                            <strong>Description:</strong>
+                            <p style={{ marginTop: 6 }}>{a.description || "-"}</p>
+                          </div>
 
-                {/* Doctor Complete */}
-                {a.status === "NURSE_COMPLETED" && (
-                  <button
-                    style={actionBtnStyle("green")}
-                    onClick={() => updateAppointment(a._id, { action: "complete" })}
-                  >
-                    Complete
-                  </button>
-                )}
+                          <div>
+                            <strong>Prescriptions</strong>
+                            {prescriptions.length === 0 ? (
+                              <p style={{ color: "#6b7280" }}>No prescriptions yet.</p>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                {prescriptions.map((p, idx) => (
+                                  <div key={idx} style={{ background: "#fff", padding: 8, borderRadius: 6, border: "1px solid #e6e6e6" }}>
+                                    <div style={{ fontWeight: 700 }}>{p.medicineName} — {p.dosage}</div>
+                                    <div style={{ fontSize: 13, color: "#555" }}>{p.duration}</div>
+                                    {p.notes && <div style={{ marginTop: 6 }}>{p.notes}</div>}
+                                    <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+                                      {p.prescribedBy && String(p.prescribedBy) === String(user?._id) ? "Prescribed by you" : "Prescribed by nurse/doctor"}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
 
-                {a.status === "DOCTOR_COMPLETED" && (
-                  <span style={{ color: "green", fontWeight: "bold" }}>
-                    ✔ Completed
-                  </span>
-                )}
+                          {/* Add prescription controls (doctor-only flow) */}
+                          {a.status !== "DOCTOR_COMPLETED" && (
+                            <div>
+                              <strong>Add Prescription (Doctor)</strong>
+                              <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                                <input placeholder="Medicine name" value={(presInputs[a._id]?.medicineName) || ""} onChange={(e) => handlePresChange(a._id, "medicineName", e.target.value)} style={inputStyle} />
+                                <input placeholder="Dosage (e.g., 1 tablet)" value={(presInputs[a._id]?.dosage) || ""} onChange={(e) => handlePresChange(a._id, "dosage", e.target.value)} style={inputStyle} />
+                                <input placeholder="Duration (e.g., 7 days)" value={(presInputs[a._id]?.duration) || ""} onChange={(e) => handlePresChange(a._id, "duration", e.target.value)} style={inputStyle} />
+                                <textarea placeholder="Notes (optional)" value={(presInputs[a._id]?.notes) || ""} onChange={(e) => handlePresChange(a._id, "notes", e.target.value)} style={{ ...inputStyle, height: 60 }} />
+                              </div>
+
+                              <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                                <button style={actionBtnStyle("orange")} onClick={() => addPrescription(a._id)} disabled={!!actionLoading[a._id]}>
+                                  {actionLoading[a._id] ? "Saving..." : "Add Prescription"}
+                                </button>
+
+                                <button style={actionBtnStyle("green")} onClick={() => addPrescriptionAndComplete(a._id)} disabled={!!actionLoading[a._id]}>
+                                  {actionLoading[a._id] ? "Processing..." : "Add & Complete"}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })
+          ) : (
+            <tr>
+              <td colSpan={6} style={{ textAlign: "center", padding: "20px" }}>
+                No Appointments
               </td>
             </tr>
-          ))
-        ) : (
-          <tr>
-            <td colSpan={6} style={{ textAlign: "center", padding: "20px" }}>
-              No Appointments
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </table>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 
   /* ------------------------------------------
-        DASHBOARD CONTENT
+     DASHBOARD render
   ------------------------------------------- */
   const renderDashboard = () => (
     <div>
@@ -402,8 +413,8 @@ export default function DoctorDashboard() {
         <p style={{ color: "orange" }}>Waiting for admin approval...</p>
       ) : (
         <>
-          <h3>Nurse List</h3>
-          {renderNurseTable()}
+          <h3>Appointments</h3>
+          {renderAppointmentTable()}
         </>
       )}
     </div>
@@ -417,37 +428,26 @@ export default function DoctorDashboard() {
       <div style={sidebarStyle}>
         <div>
           <div style={profileStyle}>
-            <img
-              src={user?.profilePic || "https://via.placeholder.com/80"}
-              alt="profile"
-              style={profilePicStyle}
-            />
+            <img src={user?.profilePic || "https://via.placeholder.com/80"} alt="profile" style={profilePicStyle} />
             <h3 style={{ color: "#fff" }}>{user?.name}</h3>
             <p style={{ color: "#aaa" }}>{user?.email}</p>
           </div>
 
-          {["Dashboard", "Nurses", "Appointments", "Profile"].map((menu) => (
-            <div
-              key={menu}
-              style={menuItemStyle(activeSection === menu)}
-              onClick={() => setActiveSection(menu)}
-            >
+          {["Dashboard", "Appointments", "Profile"].map((menu) => (
+            <div key={menu} style={menuItemStyle(activeSection === menu)} onClick={() => setActiveSection(menu)}>
               {menu}
             </div>
           ))}
         </div>
 
         <div style={{ padding: "0.5rem" }}>
-          <div style={bottomLinkStyle(false, true)} onClick={handleLogout}>
-            Logout
-          </div>
+          <div style={bottomLinkStyle(false, true)} onClick={handleLogout}>Logout</div>
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
+      {/* Main content */}
       <div style={{ flex: 1, marginLeft: "250px", padding: "2rem" }}>
         {activeSection === "Dashboard" && renderDashboard()}
-        {activeSection === "Nurses" && renderNurseTable()}
         {activeSection === "Appointments" && renderAppointmentTable()}
         {activeSection === "Profile" && <ProfileSettings />}
       </div>
@@ -478,6 +478,7 @@ const profilePicStyle = {
   width: "80px",
   height: "80px",
   borderRadius: "50%",
+  objectFit: "cover",
 };
 
 const menuItemStyle = (active) => ({
@@ -518,16 +519,20 @@ const tableStyle = {
   marginTop: "20px",
   background: "#fff",
   borderRadius: "10px",
+  borderCollapse: "collapse",
 };
 
 const thStyle = {
   background: "#000",
   color: "#fff",
   padding: "12px",
+  textAlign: "left",
 };
 
 const tdStyle = {
   padding: "12px",
+  verticalAlign: "top",
+  borderBottom: "1px solid #eee",
 };
 
 const trStyle = (i) => ({
@@ -540,12 +545,14 @@ const actionBtnStyle = (color) => ({
   borderRadius: "6px",
   margin: "2px",
   color: "#fff",
+  cursor: "pointer",
   background:
-    color === "green"
-      ? "#4CAF50"
-      : color === "orange"
-      ? "#FF9800"
-      : color === "red"
-      ? "#f44336"
-      : "#777",
+    color === "green" ? "#4CAF50" : color === "orange" ? "#FF9800" : color === "red" ? "#f44336" : "#777",
 });
+
+const inputStyle = {
+  padding: 8,
+  borderRadius: 6,
+  border: "1px solid #ddd",
+  minWidth: 180,
+};
