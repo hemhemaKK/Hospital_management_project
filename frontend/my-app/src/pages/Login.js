@@ -152,10 +152,6 @@ export default function Login() {
             Login
           </button>
 
-          <button style={googleBtn} onClick={handleGoogleAuth}>
-            Login with Google
-          </button>
-
           <p style={signupText}>
             New User?{" "}
             <Link to="/register" style={{ color: "#00626a" }}>
