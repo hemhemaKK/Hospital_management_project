@@ -405,7 +405,8 @@ const [ticketStatusFilter, setTicketStatusFilter] = useState("");
 const [ticketSearch, setTicketSearch] = useState("");
 
   /* ---------------- RENDER: DOCTORS TABLE ---------------- */
-  const renderDoctorsTable = () => {
+  /* ---------------- RENDER: DOCTORS TABLE ---------------- */
+const renderDoctorsTable = () => {
   const search = searchTerm.toLowerCase();
 
   const filteredDoctors = doctors.filter((d) => {
@@ -483,30 +484,37 @@ const [ticketSearch, setTicketSearch] = useState("");
               <td style={tdStyle}>{d.email}</td>
               <td style={tdStyle}>{d.selectedCategory?.name || "-"}</td>
 
+              {/* FIXED STATUS */}
               <td style={tdStyle}>
-                {d.isApproved ? (
-                  <span style={{ color: "green", fontWeight: "bold" }}>Approved</span>
+                {d.isVerified ? (
+                  <span style={{ color: "green", fontWeight: "bold" }}>
+                    Approved
+                  </span>
                 ) : (
-                  <span style={{ color: "red", fontWeight: "bold" }}>Pending</span>
+                  <span style={{ color: "red", fontWeight: "bold" }}>
+                    Pending
+                  </span>
                 )}
               </td>
 
               <td style={tdStyle}>
+                {/* FIXED APPROVE BUTTON */}
                 <button
                   onClick={() => approveDoctor(d._id)}
-                  disabled={d.isApproved}
+                  disabled={d.isVerified}
                   style={{
                     padding: "6px 10px",
-                    backgroundColor: d.isverified ? "#ccc" : "#4CAF50",
+                    backgroundColor: d.isVerified ? "#888" : "#4CAF50",
                     color: "#fff",
                     border: "none",
                     marginRight: "5px",
                     borderRadius: "5px",
                   }}
                 >
-                  {d.isApproved ? "Approved" : "Approve"}
+                  {d.isVerified ? "Approved" : "Approve"}
                 </button>
 
+                {/* FIXED BLOCK/UNBLOCK BUTTON */}
                 <button
                   onClick={() => toggleDoctor(d._id)}
                   style={{
@@ -518,9 +526,10 @@ const [ticketSearch, setTicketSearch] = useState("");
                     marginRight: "5px",
                   }}
                 >
-                  {d.isApproved ? "Block" : "Unblock"}
+                  {d.isVerified ? "Block" : "Unblock"}
                 </button>
 
+                {/* DELETE DOCTOR */}
                 <button
                   onClick={() => deleteDoctor(d._id)}
                   style={{

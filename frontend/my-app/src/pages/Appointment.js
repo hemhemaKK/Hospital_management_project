@@ -70,6 +70,7 @@ export default function Appointment() {
         const res = await axios.get(`${BASE_URL}/api/appointment/doctors/${categoryId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        console.log("does this fetch doctor working")
         setDoctors(res.data || []);
         setDoctorId(""); // reset selected doctor when category changes
       } catch (err) {

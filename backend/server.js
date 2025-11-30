@@ -49,7 +49,7 @@ app.use("/api/tickets", ticketRoutes);
 app.use("/api/admin", adminRoutes); 
 app.use("/api/review", reviewRoutes);
 app.use("/api/doctor", employeeRoutes);
-app.use("/api/appointments", appointmentRoutes);
+app.use("/api/appointment", appointmentRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 
 app.use("/api/superadmin", superadminRoutes)

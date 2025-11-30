@@ -41,7 +41,7 @@ export const getAllDoctors = async (req, res) => {
     })
       .populate("selectedCategory", "name")
       .sort({ createdAt: -1 })
-      .select("name email role phone isApproved selectedCategory");
+      .select("name email role phone isVerified selectedCategory");
 
     res.status(200).json(doctors);
   } catch (err) {
@@ -88,7 +88,7 @@ export const approveDoctors = async (req, res) => {
       return res.status(404).json({ message: "Doctor not found" });
 
     doctor.role = "doctor";
-    doctor.isApproved = true;
+    doctor.isVerified= true;
 
     await doctor.save();
 
@@ -117,11 +117,11 @@ export const toggleDoctorApproval = async (req, res) => {
     if (!doctor)
       return res.status(404).json({ message: "Doctor not found" });
 
-    doctor.isApproved = !doctor.isApproved;
+    doctor.isVerified = !doctor.isVerified;
     await doctor.save();
 
     res.json({
-      message: doctor.isApproved ? "Doctor approved" : "Doctor disapproved",
+      message: doctor.isVerified ? "Doctor approved" : "Doctor disapproved",
       doctor
     });
   } catch (err) {

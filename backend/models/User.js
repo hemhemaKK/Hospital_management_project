@@ -134,8 +134,7 @@ const userSchema = new mongoose.Schema(
 
     // ⭐ DOCTOR / NURSE CATEGORY
     selectedCategory: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Hospital"
+      type: mongoose.Schema.Types.ObjectId
     },
 
     // ⭐ ALL APPOINTMENTS CONNECTED TO THIS USER
