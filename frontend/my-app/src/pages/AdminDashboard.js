@@ -833,7 +833,37 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div style={{ display: "flex" }}>
+    <div style={{ display: "flex", minHeight: "100vh", position: "relative" }}>
+      {/* Mobile Header with Logout Button - Always Visible on Mobile */}
+      {isMobile && (
+        <div className="mobile-header">
+          <div className="mobile-header-content">
+            <div className="mobile-profile">
+              {user?.profilePic && (
+                <img 
+                  src={user.profilePic} 
+                  alt="Profile" 
+                  className="mobile-profile-pic" 
+                />
+              )}
+              <div className="mobile-user-info">
+                <h3>{user?.name || "Admin"}</h3>
+                <p>{user?.role} • {user?.tenantId || "System"}</p>
+              </div>
+            </div>
+
+            {/* Mobile Logout Button - Always Visible */}
+            <button
+              className="mobile-logout-btn"
+              onClick={handleLogout}
+              title="Logout"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Hamburger Menu */}
       <button 
         className={`hamburger-menu ${sidebarVisible ? 'active' : ''}`}
@@ -875,9 +905,12 @@ export default function AdminDashboard() {
         </div>
 
         <div style={{ padding: "0.5rem" }}>
-          <div className="bottom-link logout" onClick={handleLogout}>
-            Logout
-          </div>
+          {/* Only show sidebar logout on desktop */}
+          {!isMobile && (
+            <div className="bottom-link logout" onClick={handleLogout}>
+              Logout
+            </div>
+          )}
         </div>
       </div>
 

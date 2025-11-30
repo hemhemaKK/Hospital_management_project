@@ -163,7 +163,8 @@ export default function AppointmentStatus() {
               <tr
                 key={a._id}
                 style={{
-                  borderBottom: "1px solid #fffdfdff",
+                  background: "#ffffffff",
+                  borderBottom: "1px solid #2a1b1bff",
                   animation: `rowFade 0.4s ease ${index * 0.1}s`,
                 }}
               >

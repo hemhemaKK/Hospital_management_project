@@ -11,6 +11,8 @@ export default function NurseDashboard() {
 
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [user, setUser] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
@@ -20,6 +22,24 @@ export default function NurseDashboard() {
 
   const [appointments, setAppointments] = useState([]);
   const [prescriptionText, setPrescriptionText] = useState({}); // keyed by appointmentId
+
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setSidebarVisible(false);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
 
   /* --------------------------------------------------------
      LOAD NURSE + CATEGORIES + NURSE APPOINTMENTS
@@ -75,6 +95,21 @@ export default function NurseDashboard() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/login");
+  };
+
+  const handleMenuClick = (menu) => {
+    setActiveSection(menu);
+    if (isMobile) {
+      setSidebarVisible(false);
+    }
+  };
+
+  const toggleSidebar = () => {
+    setSidebarVisible(!sidebarVisible);
+  };
+
+  const closeSidebar = () => {
+    setSidebarVisible(false);
   };
 
   /* --------------------------------------------------------
@@ -338,9 +373,61 @@ export default function NurseDashboard() {
   if (loading) return <p>Loading...</p>;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", position: "relative" }}>
+      {/* Mobile Header with Logout Button - Always Visible on Mobile */}
+      {isMobile && (
+        <div style={mobileHeaderStyle}>
+          <div style={mobileHeaderContent}>
+            {/* Hamburger Menu */}
+            <button 
+              style={hamburgerStyle}
+              onClick={toggleSidebar}
+            >
+              <span style={hamburgerLineStyle}></span>
+              <span style={hamburgerLineStyle}></span>
+              <span style={hamburgerLineStyle}></span>
+            </button>
+            
+            <div style={mobileUserInfo}>
+              <img
+                src={user?.profilePic || "https://via.placeholder.com/35"}
+                alt="profile"
+                style={mobileProfilePicStyle}
+              />
+              <div style={mobileUserText}>
+                <h3 style={{ margin: 0, fontSize: "14px", color: "#fff" }}>{user?.name}</h3>
+                <p style={{ margin: 0, fontSize: "11px", color: "#ccc" }}>{user?.role}</p>
+              </div>
+            </div>
+
+            {/* Mobile Logout Button */}
+            <button
+              style={mobileLogoutButtonStyle}
+              onClick={handleLogout}
+              title="Logout"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Overlay */}
+      {isMobile && sidebarVisible && (
+        <div 
+          style={overlayStyle}
+          onClick={closeSidebar}
+        />
+      )}
+
       {/* ---------------- SIDEBAR ---------------- */}
-      <div style={sidebarStyle}>
+      <div style={{
+        ...sidebarStyle,
+        left: isMobile ? (sidebarVisible ? "0" : "-250px") : "0",
+        top: isMobile ? "60px" : "0",
+        height: isMobile ? "calc(100vh - 60px)" : "100vh",
+        transition: "left 0.3s ease-in-out",
+      }}>
         <div>
           <div style={profileStyle}>
             <img
@@ -357,7 +444,7 @@ export default function NurseDashboard() {
               <div
                 key={menu}
                 style={menuItemStyle(activeSection === menu)}
-                onClick={() => setActiveSection(menu)}
+                onClick={() => handleMenuClick(menu)}
               >
                 {menu}
               </div>
@@ -366,14 +453,17 @@ export default function NurseDashboard() {
         </div>
 
         <div style={{ padding: "0.5rem" }}>
-          <div style={bottomLinkStyle(false, true)} onClick={handleLogout}>
-            Logout
-          </div>
+          {/* Only show sidebar logout on desktop */}
+          {!isMobile && (
+            <div style={bottomLinkStyle(false, true)} onClick={handleLogout}>
+              Logout
+            </div>
+          )}
         </div>
       </div>
 
       {/* ---------------- CONTENT ---------------- */}
-      <div style={{ flex: 1, marginLeft: "250px", padding: "2rem" }}>
+      <div style={contentStyle(isMobile)}>
         {activeSection === "Dashboard" && renderDashboard()}
         {activeSection === "My Doctor" && renderDoctorInfo()}
         {activeSection === "Appointments" && renderAppointments()}
@@ -385,15 +475,99 @@ export default function NurseDashboard() {
 
 /* ====================== CSS ====================== */
 
+// Mobile Header Styles
+const mobileHeaderStyle = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  background: "#111",
+  padding: "10px 15px",
+  zIndex: 1000,
+  boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+  borderBottom: "1px solid #444",
+};
+
+const mobileHeaderContent = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  width: "100%",
+};
+
+const mobileUserInfo = {
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  flex: 1,
+  marginLeft: "10px",
+};
+
+const mobileUserText = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+};
+
+const mobileProfilePicStyle = {
+  width: "35px",
+  height: "35px",
+  borderRadius: "50%",
+  objectFit: "cover",
+  border: "2px solid #4CAF50",
+};
+
+const mobileLogoutButtonStyle = {
+  background: "#ff4d4d",
+  color: "white",
+  border: "none",
+  borderRadius: "6px",
+  padding: "8px 12px",
+  cursor: "pointer",
+  fontSize: "12px",
+  fontWeight: "bold",
+};
+
+// Hamburger Menu Styles
+const hamburgerStyle = {
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "space-between",
+  width: "25px",
+  height: "20px",
+  padding: 0,
+};
+
+const hamburgerLineStyle = {
+  width: "100%",
+  height: "3px",
+  backgroundColor: "#fff",
+  borderRadius: "2px",
+  transition: "all 0.3s ease",
+};
+
+const overlayStyle = {
+  position: "fixed",
+  top: "60px",
+  left: 0,
+  width: "100%",
+  height: "calc(100% - 60px)",
+  backgroundColor: "rgba(0,0,0,0.5)",
+  zIndex: 998,
+};
+
 const sidebarStyle = {
   width: "250px",
   background: "#111",
-  height: "100vh",
   padding: "1rem",
   position: "fixed",
   display: "flex",
   flexDirection: "column",
   justifyContent: "space-between",
+  zIndex: 999,
 };
 
 const profileStyle = {
@@ -417,6 +591,7 @@ const menuItemStyle = (active) => ({
   background: active ? "#333" : "transparent",
   color: active ? "#4CAF50" : "#fff",
   cursor: "pointer",
+  transition: "all 0.2s ease",
 });
 
 const bottomLinkStyle = (active, isLogout = false) => ({
@@ -426,12 +601,24 @@ const bottomLinkStyle = (active, isLogout = false) => ({
   color: "#fff",
   cursor: "pointer",
   background: isLogout ? "#ff4d4d" : active ? "#222" : "transparent",
+  transition: "background-color 0.2s ease",
+});
+
+const contentStyle = (isMobile) => ({
+  flex: 1,
+  marginLeft: isMobile ? "0" : "250px",
+  padding: isMobile ? "80px 15px 15px 15px" : "2rem",
+  transition: "all 0.3s ease-in-out",
+  minHeight: "100vh",
+  width: isMobile ? "100%" : "calc(100% - 250px)",
 });
 
 const selectStyle = {
   padding: "8px",
   marginRight: "10px",
   borderRadius: "6px",
+  width: isMobile ? "100%" : "auto",
+  marginBottom: isMobile ? "10px" : "0",
 };
 
 const chooseBtnStyle = {
@@ -441,13 +628,14 @@ const chooseBtnStyle = {
   color: "white",
   borderRadius: "6px",
   cursor: "pointer",
+  width: isMobile ? "100%" : "auto",
 };
 
 const doctorBox = {
   background: "#fff",
   padding: "20px",
   borderRadius: "10px",
-  width: "300px",
+  width: isMobile ? "100%" : "300px",
   fontSize: "16px",
   boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
 };
@@ -459,6 +647,7 @@ const textAreaStyle = {
   padding: "8px",
   borderRadius: "6px",
   border: "1px solid #ccc",
+  fontSize: "14px",
 };
 
 const completeBtnStyle = {
@@ -469,6 +658,8 @@ const completeBtnStyle = {
   borderRadius: "6px",
   marginTop: "10px",
   cursor: "pointer",
+  width: isMobile ? "100%" : "auto",
+  marginRight: isMobile ? "0" : "10px",
 };
 
 const presBtnStyle = {
@@ -479,4 +670,5 @@ const presBtnStyle = {
   borderRadius: "6px",
   marginTop: "10px",
   cursor: "pointer",
+  width: isMobile ? "100%" : "auto",
 };
