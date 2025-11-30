@@ -70,7 +70,6 @@ export default function Appointment() {
         const res = await axios.get(`${BASE_URL}/api/appointment/doctors/${categoryId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("does this fetch doctor working")
         setDoctors(res.data || []);
         setDoctorId(""); // reset selected doctor when category changes
       } catch (err) {
@@ -83,45 +82,43 @@ export default function Appointment() {
   }, [token, categoryId]);
 
   // ---------- When doctor OR date changes -> load available slots ----------
-useEffect(() => {
-  if (!token || !doctorId || !date) {
-    setAvailableSlots([]);
-    setSelectedSlot("");
-    return;
-  }
-
-  const fetchSlots = async () => {
-    try {
-      // 1) get available slots from backend
-      const res = await axios.get(
-        `${BASE_URL}/api/appointment/slots/${doctorId}/${date}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      let slots = res.data?.availableSlots || [];
-
-      // 2) fetch all appointments for this doctor on this date
-      const bookedRes = await axios.get(
-        `${BASE_URL}/api/admin/appointments/doctor/${doctorId}/${date}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const bookedTimes = bookedRes.data?.map((b) => b.time) || [];
-
-      // 3) remove booked slots
-      const filtered = slots.filter((slot) => !bookedTimes.includes(slot));
-
-      setAvailableSlots(filtered);
-      setSelectedSlot("");
-    } catch (err) {
-      console.error("Error fetching slots:", err);
+  useEffect(() => {
+    if (!token || !doctorId || !date) {
       setAvailableSlots([]);
+      setSelectedSlot("");
+      return;
     }
-  };
 
-  fetchSlots();
-}, [token, doctorId, date]);
+    const fetchSlots = async () => {
+      try {
+        const res = await axios.get(
+          `${BASE_URL}/api/appointment/slots/${doctorId}/${date}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
+        // all possible slots
+        const allSlots = [];
+        for (let h = 9; h < 17; h++) {
+          allSlots.push(`${h}:00`);
+          allSlots.push(`${h}:30`);
+        }
+
+        const booked = res.data?.bookedSlots || [];
+
+        setAvailableSlots(allSlots.map(slot => ({
+          time: slot,
+          isBooked: booked.includes(slot)
+        })));
+
+        setSelectedSlot("");
+      } catch (err) {
+        console.error("Error fetching slots:", err);
+        setAvailableSlots([]);
+      }
+    };
+
+    fetchSlots();
+  }, [token, doctorId, date]);
 
   // ---------- Load user's appointments ----------
   const loadAppointments = async (uid) => {
@@ -255,20 +252,21 @@ useEffect(() => {
           {doctorId && date ? (
             availableSlots.length > 0 ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {availableSlots.map((slot) => (
+                {availableSlots.map((slotObj) => (
                   <button
-                    key={slot}
+                    key={slotObj.time}
                     type="button"
-                    onClick={() => setSelectedSlot(slot)}
+                    onClick={() => !slotObj.isBooked && setSelectedSlot(slotObj.time)}
+                    disabled={slotObj.isBooked}
                     style={{
                       padding: "8px 12px",
                       borderRadius: 6,
-                      border: selectedSlot === slot ? "2px solid #1976d2" : "1px solid #ccc",
-                      background: selectedSlot === slot ? "#e8f0ff" : "#fff",
-                      cursor: "pointer",
+                      border: selectedSlot === slotObj.time ? "2px solid #1976d2" : "1px solid #ccc",
+                      background: slotObj.isBooked ? "#f8d7da" : selectedSlot === slotObj.time ? "#e8f0ff" : "#fff",
+                      cursor: slotObj.isBooked ? "not-allowed" : "pointer",
                     }}
                   >
-                    {slot}
+                    {slotObj.time}
                   </button>
                 ))}
               </div>
