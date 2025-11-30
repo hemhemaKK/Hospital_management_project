@@ -201,9 +201,9 @@ export default function NurseDashboard() {
      CATEGORY SELECT UI
   -------------------------------------------------------- */
   const renderCategorySelection = () => (
-    <div style={{ marginTop: "20px" }}>
+    <div style={categorySelectionStyle}>
       <select
-        style={selectStyle}
+        style={selectStyle(isMobile)}
         value={selectedCategoryId}
         onChange={(e) => setSelectedCategoryId(e.target.value)}
       >
@@ -215,7 +215,7 @@ export default function NurseDashboard() {
         ))}
       </select>
 
-      <button onClick={chooseCategory} style={chooseBtnStyle}>
+      <button onClick={chooseCategory} style={chooseBtnStyle(isMobile)}>
         Submit
       </button>
     </div>
@@ -226,7 +226,7 @@ export default function NurseDashboard() {
   -------------------------------------------------------- */
   const renderDoctorInfo = () =>
     assignedDoctor ? (
-      <div style={doctorBox}>
+      <div style={doctorBox(isMobile)}>
         <h3>Assigned Doctor</h3>
         <p>
           <b>Name:</b> {assignedDoctor?.name}
@@ -235,7 +235,8 @@ export default function NurseDashboard() {
           <b>Email:</b> {assignedDoctor?.email}
         </p>
         <p>
-          <b>Phone:</b> {assignedDoctor?.phone || "-"}</p>
+          <b>Phone:</b> {assignedDoctor?.phone || "-"}
+        </p>
       </div>
     ) : (
       <p>No doctor assigned yet.</p>
@@ -245,7 +246,7 @@ export default function NurseDashboard() {
      NURSE APPOINTMENTS UI
   -------------------------------------------------------- */
   const renderAppointments = () => (
-    <div>
+    <div style={appointmentsContainerStyle}>
       <h2>My Appointments</h2>
 
       {appointments.length === 0 ? (
@@ -254,39 +255,27 @@ export default function NurseDashboard() {
         appointments.map((appt) => (
           <div
             key={appt._id}
-            style={{
-              background: "#fff",
-              padding: "16px",
-              borderRadius: "10px",
-              marginBottom: "16px",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-            }}
+            style={appointmentCardStyle(isMobile)}
           >
-            <h3>{appt.user?.name}</h3>
-            <p>
+            <h3 style={{ margin: "0 0 10px 0", fontSize: isMobile ? "18px" : "20px" }}>{appt.user?.name}</h3>
+            <p style={appointmentDetailStyle}>
               <b>Date:</b> {appt.date}
             </p>
-            <p>
+            <p style={appointmentDetailStyle}>
               <b>Time:</b> {appt.time}
             </p>
-            <p>
+            <p style={appointmentDetailStyle}>
               <b>Doctor:</b> {appt.doctor?.name}
             </p>
-            <p>
+            <p style={appointmentDetailStyle}>
               <b>Description:</b> {appt.description}
             </p>
 
             {/* STATUS BADGE */}
-            <p>
+            <p style={appointmentDetailStyle}>
               <b>Status:</b>{" "}
               <span
-                style={{
-                  padding: "4px 8px",
-                  borderRadius: "6px",
-                  color: "#fff",
-                  background:
-                    appt.status === "NURSE_COMPLETED" ? "green" : "orange",
-                }}
+                style={statusBadgeStyle(appt.status)}
               >
                 {appt.status}
               </span>
@@ -294,12 +283,12 @@ export default function NurseDashboard() {
 
             {/* EXISTING PRESCRIPTIONS */}
             <div style={{ marginTop: "10px" }}>
-              <h4>Prescriptions:</h4>
+              <h4 style={{ margin: "15px 0 10px 0", fontSize: isMobile ? "16px" : "18px" }}>Prescriptions:</h4>
               {appt.prescription?.length === 0 ? (
                 <p>No prescriptions yet.</p>
               ) : (
                 appt.prescription.map((p, i) => (
-                  <div key={i} style={{ marginBottom: "6px" }}>
+                  <div key={i} style={prescriptionItemStyle}>
                     <b>{p.prescribedBy === appt.doctor?._id ? "Doctor" : "Nurse"}:</b>{" "}
                     {p.medicineName} | {p.dosage} | {p.duration} | {p.notes}
                   </div>
@@ -307,28 +296,24 @@ export default function NurseDashboard() {
               )}
             </div>
 
-            {/* DISABLE AFTER COMPLETE */}
-            <button
-              style={{
-                ...completeBtnStyle,
-                opacity: appt.status === "NURSE_COMPLETED" ? 0.5 : 1,
-                cursor:
-                  appt.status === "NURSE_COMPLETED"
-                    ? "not-allowed"
-                    : "pointer",
-              }}
-              disabled={appt.status === "NURSE_COMPLETED"}
-              onClick={() => markAsComplete(appt._id)}
-            >
-              {appt.status === "NURSE_COMPLETED"
-                ? "Completed"
-                : "Mark as Complete"}
-            </button>
+            {/* Action Buttons Container */}
+            <div style={actionButtonsContainerStyle(isMobile)}>
+              {/* Complete Button */}
+              <button
+                style={completeBtnStyle(isMobile, appt.status === "NURSE_COMPLETED")}
+                disabled={appt.status === "NURSE_COMPLETED"}
+                onClick={() => markAsComplete(appt._id)}
+              >
+                {appt.status === "NURSE_COMPLETED"
+                  ? "Completed"
+                  : "Mark as Complete"}
+              </button>
+            </div>
 
             {/* Prescription Input */}
             <textarea
               placeholder="Add Prescription..."
-              style={textAreaStyle}
+              style={textAreaStyle(isMobile)}
               value={prescriptionText[appt._id] || ""}
               onChange={(e) =>
                 setPrescriptionText((prev) => ({
@@ -339,7 +324,7 @@ export default function NurseDashboard() {
             />
 
             <button
-              style={presBtnStyle}
+              style={presBtnStyle(isMobile)}
               onClick={() => addPrescription(appt._id)}
             >
               Save Prescription
@@ -354,16 +339,16 @@ export default function NurseDashboard() {
      DASHBOARD MAIN VIEW
   -------------------------------------------------------- */
   const renderDashboard = () => (
-    <div>
+    <div style={dashboardContainerStyle}>
       {!user.selectedCategory ? (
         renderCategorySelection()
       ) : !user.isVerified ? (
-        <p style={{ color: "orange", marginTop: "20px" }}>
+        <p style={waitingApprovalStyle}>
           Waiting for doctor approval...
         </p>
       ) : (
         <>
-          <h3 style={{ marginTop: "30px" }}>Your Assigned Doctor</h3>
+          <h3 style={{ marginTop: "30px", fontSize: isMobile ? "20px" : "24px" }}>Your Assigned Doctor</h3>
           {renderDoctorInfo()}
         </>
       )}
@@ -373,7 +358,7 @@ export default function NurseDashboard() {
   if (loading) return <p>Loading...</p>;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", position: "relative" }}>
+    <div style={containerStyle}>
       {/* Mobile Header with Logout Button - Always Visible on Mobile */}
       {isMobile && (
         <div style={mobileHeaderStyle}>
@@ -435,8 +420,8 @@ export default function NurseDashboard() {
               alt="profile"
               style={profilePicStyle}
             />
-            <h3 style={{ color: "#fff" }}>{user?.name}</h3>
-            <p style={{ color: "#aaa" }}>{user?.email}</p>
+            <h3 style={{ color: "#fff", fontSize: isMobile ? "16px" : "18px", margin: "10px 0 5px 0" }}>{user?.name}</h3>
+            <p style={{ color: "#aaa", fontSize: isMobile ? "12px" : "14px", margin: 0 }}>{user?.email}</p>
           </div>
 
           {["Dashboard", "My Doctor", "Appointments", "Profile"].map(
@@ -473,7 +458,13 @@ export default function NurseDashboard() {
   );
 }
 
-/* ====================== CSS ====================== */
+/* ====================== RESPONSIVE STYLES ====================== */
+
+const containerStyle = {
+  display: "flex",
+  minHeight: "100vh",
+  position: "relative",
+};
 
 // Mobile Header Styles
 const mobileHeaderStyle = {
@@ -486,6 +477,7 @@ const mobileHeaderStyle = {
   zIndex: 1000,
   boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
   borderBottom: "1px solid #444",
+  boxSizing: "border-box",
 };
 
 const mobileHeaderContent = {
@@ -526,6 +518,7 @@ const mobileLogoutButtonStyle = {
   cursor: "pointer",
   fontSize: "12px",
   fontWeight: "bold",
+  whiteSpace: "nowrap",
 };
 
 // Hamburger Menu Styles
@@ -568,6 +561,7 @@ const sidebarStyle = {
   flexDirection: "column",
   justifyContent: "space-between",
   zIndex: 999,
+  boxSizing: "border-box",
 };
 
 const profileStyle = {
@@ -585,23 +579,25 @@ const profilePicStyle = {
 };
 
 const menuItemStyle = (active) => ({
-  padding: "10px",
+  padding: "12px",
   margin: "8px 0",
   borderRadius: "6px",
   background: active ? "#333" : "transparent",
   color: active ? "#4CAF50" : "#fff",
   cursor: "pointer",
   transition: "all 0.2s ease",
+  fontSize: "14px",
 });
 
 const bottomLinkStyle = (active, isLogout = false) => ({
-  padding: "10px",
+  padding: "12px",
   borderRadius: "8px",
   textAlign: "center",
   color: "#fff",
   cursor: "pointer",
   background: isLogout ? "#ff4d4d" : active ? "#222" : "transparent",
   transition: "background-color 0.2s ease",
+  fontSize: "14px",
 });
 
 const contentStyle = (isMobile) => ({
@@ -610,65 +606,145 @@ const contentStyle = (isMobile) => ({
   padding: isMobile ? "80px 15px 15px 15px" : "2rem",
   transition: "all 0.3s ease-in-out",
   minHeight: "100vh",
-  // width: isMobile ? "100%" : "calc(100% - 250px)",
+  boxSizing: "border-box",
+  width: isMobile ? "100%" : "calc(100% - 250px)",
 });
 
-const selectStyle = {
-  padding: "8px",
-  marginRight: "10px",
-  borderRadius: "6px",
-  width: isMobile ? "100%" : "auto",
-  // marginBottom: isMobile ? "10px" : "0",
+// Category Selection Styles
+const categorySelectionStyle = {
+  marginTop: "20px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+  width: "100%",
 };
 
-const chooseBtnStyle = {
-  padding: "8px 16px",
+const selectStyle = (isMobile) => ({
+  padding: "12px",
+  borderRadius: "6px",
+  border: "1px solid #ddd",
+  fontSize: isMobile ? "14px" : "16px",
+  width: "100%",
+  boxSizing: "border-box",
+});
+
+const chooseBtnStyle = (isMobile) => ({
+  padding: "12px 20px",
   background: "#4CAF50",
   border: "none",
   color: "white",
   borderRadius: "6px",
   cursor: "pointer",
-  // width: isMobile ? "100%" : "auto",
+  fontSize: isMobile ? "14px" : "16px",
+  width: isMobile ? "100%" : "auto",
+  fontWeight: "bold",
+});
+
+const waitingApprovalStyle = {
+  color: "orange",
+  marginTop: "20px",
+  fontSize: "16px",
+  textAlign: "center",
+  padding: "20px",
 };
 
-const doctorBox = {
+// Doctor Info Styles
+const doctorBox = (isMobile) => ({
   background: "#fff",
   padding: "20px",
   borderRadius: "10px",
   width: isMobile ? "100%" : "300px",
-  fontSize: "16px",
+  fontSize: isMobile ? "14px" : "16px",
   boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-};
-
-const textAreaStyle = {
-  width: "100%",
-  height: "70px",
+  boxSizing: "border-box",
   marginTop: "10px",
-  padding: "8px",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-  fontSize: "14px",
+});
+
+// Appointments Styles
+const appointmentsContainerStyle = {
+  width: "100%",
 };
 
-const completeBtnStyle = {
-  padding: "8px 12px",
-  background: "green",
+const appointmentCardStyle = (isMobile) => ({
+  background: "#fff",
+  padding: isMobile ? "12px" : "16px",
+  borderRadius: "10px",
+  marginBottom: "16px",
+  boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+  boxSizing: "border-box",
+  width: "100%",
+});
+
+const appointmentDetailStyle = {
+  margin: "8px 0",
+  fontSize: "14px",
+  lineHeight: "1.4",
+};
+
+const statusBadgeStyle = (status) => ({
+  padding: "4px 8px",
+  borderRadius: "6px",
+  color: "#fff",
+  background: status === "NURSE_COMPLETED" ? "green" : "orange",
+  fontSize: "12px",
+  fontWeight: "bold",
+  display: "inline-block",
+});
+
+const prescriptionItemStyle = {
+  marginBottom: "6px",
+  fontSize: "13px",
+  padding: "8px",
+  background: "#f8f9fa",
+  borderRadius: "4px",
+  borderLeft: "3px solid #4CAF50",
+};
+
+const actionButtonsContainerStyle = (isMobile) => ({
+  display: "flex",
+  flexDirection: isMobile ? "column" : "row",
+  gap: "10px",
+  marginTop: "15px",
+});
+
+const completeBtnStyle = (isMobile, isCompleted) => ({
+  padding: "10px 16px",
+  background: isCompleted ? "#ccc" : "green",
   color: "white",
   border: "none",
   borderRadius: "6px",
-  marginTop: "10px",
-  cursor: "pointer",
-  // width: isMobile ? "100%" : "auto",
-  // marginRight: isMobile ? "0" : "10px",
-};
+  cursor: isCompleted ? "not-allowed" : "pointer",
+  fontSize: isMobile ? "13px" : "14px",
+  width: isMobile ? "100%" : "auto",
+  opacity: isCompleted ? 0.6 : 1,
+  fontWeight: "bold",
+});
 
-const presBtnStyle = {
-  padding: "8px 12px",
+const textAreaStyle = (isMobile) => ({
+  width: "100%",
+  height: "70px",
+  marginTop: "10px",
+  padding: "10px",
+  borderRadius: "6px",
+  border: "1px solid #ccc",
+  fontSize: isMobile ? "14px" : "16px",
+  boxSizing: "border-box",
+  fontFamily: "inherit",
+});
+
+const presBtnStyle = (isMobile) => ({
+  padding: "10px 16px",
   background: "#3b82f6",
   color: "white",
   border: "none",
   borderRadius: "6px",
   marginTop: "10px",
   cursor: "pointer",
-  width: isMobile ? "100%" : "auto",
+  width: "100%",
+  fontSize: isMobile ? "14px" : "16px",
+  fontWeight: "bold",
+});
+
+const dashboardContainerStyle = {
+  width: "100%",
 };
