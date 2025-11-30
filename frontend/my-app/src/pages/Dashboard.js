@@ -185,38 +185,55 @@ export default function Dashboard() {
         style={{
           ...menuStyle,
           left: isMobile ? (menuOpen ? "0" : "-250px") : "0",
-          top: isMobile ? "60px" : "0", // Adjust top for mobile header
-          height: isMobile ? "calc(100vh - 60px)" : "100vh", // Adjust height for mobile header
+          top: isMobile ? "60px" : "0",
+          height: isMobile ? "calc(100vh - 60px)" : "100vh",
           transition: "left 0.3s ease-in-out",
           zIndex: 999,
+          overflowY: "auto", // Ensure scrolling for long content
         }}
       >
-        <div style={userInfoStyle}>
+        {/* Compact User Info for Mobile */}
+        <div style={isMobile ? mobileSidebarUserInfoStyle : userInfoStyle}>
           <img
             src={user.profilePic || "https://via.placeholder.com/60"}
             alt="Profile"
-            style={profilePicStyle}
+            style={isMobile ? mobileSidebarProfilePicStyle : profilePicStyle}
           />
-          <div>
-            <p style={{ margin: 0, fontWeight: "bold" }}>{user.name}</p>
-            <p style={{ margin: 0, fontSize: "0.85rem", color: "#ccc" }}>
+          <div style={isMobile ? mobileSidebarUserTextStyle : {}}>
+            <p style={{ margin: 0, fontWeight: "bold", fontSize: isMobile ? "14px" : "16px" }}>
+              {user.name}
+            </p>
+            <p style={{ 
+              margin: 0, 
+              fontSize: isMobile ? "11px" : "0.85rem", 
+              color: isMobile ? "#999" : "#ccc",
+              marginTop: isMobile ? "2px" : "0"
+            }}>
               {user.email}
             </p>
-            <p style={{ margin: 0, fontSize: "0.8rem", color: "#aaa" }}>
+            <p style={{ 
+              margin: 0, 
+              fontSize: isMobile ? "10px" : "0.8rem", 
+              color: isMobile ? "#777" : "#aaa",
+              marginTop: isMobile ? "2px" : "0"
+            }}>
               Role: {user.role?.toUpperCase() || "USER"}
             </p>
           </div>
         </div>
 
-        {sections.map((section) => (
-          <div
-            key={section}
-            style={menuItemStyle(activeSection === section)}
-            onClick={() => handleMenuItemClick(section)}
-          >
-            {section}
-          </div>
-        ))}
+        {/* Menu Items with reduced spacing */}
+        <div style={menuItemsContainerStyle}>
+          {sections.map((section) => (
+            <div
+              key={section}
+              style={menuItemStyle(activeSection === section, isMobile)}
+              onClick={() => handleMenuItemClick(section)}
+            >
+              {section}
+            </div>
+          ))}
+        </div>
 
         {/* Desktop Logout Button - Only visible in sidebar on desktop */}
         {!isMobile && (
@@ -224,6 +241,17 @@ export default function Dashboard() {
             style={logoutButtonStyle}
             onClick={handleLogout}
           >
+            Logout
+          </button>
+        )}
+
+        {/* Mobile Logout in Sidebar - Only show if there's space */}
+        {isMobile && (
+          <button
+            style={mobileSidebarLogoutButtonStyle}
+            onClick={handleLogout}
+          >
+            <FaSignOutAlt style={{ marginRight: "8px" }} />
             Logout
           </button>
         )}
@@ -319,7 +347,7 @@ const hamburgerStyle = {
 
 const overlayStyle = {
   position: "fixed",
-  top: "60px", // Start below mobile header
+  top: "60px",
   left: 0,
   width: "100%",
   height: "calc(100% - 60px)",
@@ -333,10 +361,35 @@ const menuStyle = {
   color: "#fff",
   display: "flex",
   flexDirection: "column",
-  padding: "1rem",
+  padding: isMobile => isMobile ? "0.8rem" : "1rem",
   position: "fixed",
   bottom: 0,
   overflowY: "auto",
+};
+
+// UPDATED: More compact user info for mobile sidebar
+const mobileSidebarUserInfoStyle = {
+  textAlign: "left",
+  marginBottom: "1rem",
+  padding: "8px 10px",
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  borderBottom: "1px solid #333",
+  paddingBottom: "12px",
+};
+
+const mobileSidebarProfilePicStyle = {
+  width: "45px",
+  height: "45px",
+  borderRadius: "50%",
+  border: "2px solid #444",
+  flexShrink: 0,
+};
+
+const mobileSidebarUserTextStyle = {
+  flex: 1,
+  minWidth: 0, // Prevent overflow
 };
 
 const userInfoStyle = {
@@ -353,17 +406,26 @@ const profilePicStyle = {
   border: "2px solid #444",
 };
 
-const menuItemStyle = (isActive) => ({
-  padding: "12px 16px",
-  marginBottom: "8px",
-  borderRadius: "8px",
+// NEW: Container for menu items to control spacing
+const menuItemsContainerStyle = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px", // Reduced gap between menu items
+};
+
+// UPDATED: Menu item style with reduced spacing for mobile
+const menuItemStyle = (isActive, isMobile) => ({
+  padding: isMobile ? "10px 12px" : "12px 16px",
+  borderRadius: "6px",
   cursor: "pointer",
   backgroundColor: isActive ? "#2c5aa0" : "transparent",
   color: isActive ? "#fff" : "#ddd",
   fontWeight: isActive ? "bold" : "normal",
   transition: "all 0.2s ease",
   border: isActive ? "1px solid #4CAF50" : "1px solid transparent",
-  fontSize: "14px",
+  fontSize: isMobile ? "13px" : "14px",
+  marginBottom: isMobile ? "2px" : "4px", // Reduced margin
 });
 
 const logoutButtonStyle = {
@@ -379,10 +441,27 @@ const logoutButtonStyle = {
   transition: "background-color 0.2s ease",
 };
 
+// NEW: Mobile sidebar logout button
+const mobileSidebarLogoutButtonStyle = {
+  marginTop: "10px",
+  padding: "10px 12px",
+  borderRadius: "6px",
+  border: "none",
+  backgroundColor: "#e74c3c",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: "bold",
+  fontSize: "13px",
+  transition: "background-color 0.2s ease",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
 // UPDATED: Content style to account for mobile header
 const contentStyle = (isMobile, menuOpen) => ({
   flex: 1,
-  padding: isMobile ? "80px 15px 15px 15px" : "2rem", // More top padding for mobile header
+  padding: isMobile ? "80px 12px 12px 12px" : "2rem",
   marginLeft: isMobile ? "0" : "250px",
   transition: "all 0.3s ease-in-out",
   background: "linear-gradient(135deg, #f4f4f4, #e0e7ff)",
@@ -393,15 +472,15 @@ const contentStyle = (isMobile, menuOpen) => ({
 const cards = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-  gap: "20px",
+  gap: "15px", // Reduced gap
   width: "100%",
 };
 
 const cardStyle = (isMobile) => ({
   background: "linear-gradient(135deg, #ffffff, #f0f4ff)",
-  borderRadius: "15px",
-  padding: "2rem",
-  boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
-  marginTop: isMobile ? "0" : "20px",
+  borderRadius: "12px",
+  padding: isMobile ? "1.2rem" : "2rem",
+  boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
+  marginTop: isMobile ? "0" : "15px",
   width: "100%",
 });
