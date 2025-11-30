@@ -5,17 +5,25 @@ const BASE_URL = "http://localhost:5000";
 
 export default function AppointmentStatus({ userId }) {
   const token = localStorage.getItem("token");
+
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // ---------- Load appointments ----------
+  /* ---------------------- Load Appointments ---------------------- */
   const loadAppointments = async () => {
     if (!token || !userId) return;
+
     setLoading(true);
+
     try {
-      const res = await axios.get(`${BASE_URL}/api/appointment/user/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(
+        `${BASE_URL}/api/appointment/user/${userId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Backend returns: user.appointments (array)
       setAppointments(res.data || []);
     } catch (err) {
       console.error("Error loading appointments:", err);
@@ -28,14 +36,23 @@ export default function AppointmentStatus({ userId }) {
     loadAppointments();
   }, [userId]);
 
-  // ---------- Cancel appointment ----------
+  /* ---------------------- Cancel Appointment ---------------------- */
   const handleCancel = async (appointmentId) => {
-    if (!window.confirm("Are you sure you want to cancel this appointment?")) return;
+    if (!window.confirm("Are you sure you want to cancel this appointment?"))
+      return;
+
     try {
-      await axios.delete(`${BASE_URL}/api/appointment/${userId}/${appointmentId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setAppointments((prev) => prev.filter((a) => a._id !== appointmentId));
+      await axios.delete(
+        `${BASE_URL}/api/appointment/${userId}/${appointmentId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setAppointments((prev) =>
+        prev.filter((a) => a._id !== appointmentId)
+      );
+
       alert("Appointment cancelled");
     } catch (err) {
       console.error("Cancel failed:", err);
@@ -43,10 +60,11 @@ export default function AppointmentStatus({ userId }) {
     }
   };
 
-  // ---------- Render ----------
+  /* ---------------------------- UI ---------------------------- */
   return (
     <div style={{ marginTop: 20 }}>
       <h3>My Appointments</h3>
+
       {loading ? (
         <p>Loading appointments...</p>
       ) : appointments.length === 0 ? (
@@ -63,31 +81,34 @@ export default function AppointmentStatus({ userId }) {
               <th style={thStyle}>Action</th>
             </tr>
           </thead>
+
           <tbody>
             {appointments.map((a) => (
               <tr key={a._id} style={{ borderBottom: "1px solid #eee" }}>
                 <td style={tdStyle}>
-                  {a.doctor?.name || `${a.doctor?.firstName || ""} ${a.doctor?.lastName || ""}`.trim()}
+                  {a.doctor?.name ||
+                    `${a.doctor?.firstName || ""} ${
+                      a.doctor?.lastName || ""
+                    }`.trim()}
                 </td>
+
                 <td style={tdStyle}>{a.category?.name || "-"}</td>
+
                 <td style={tdStyle}>{a.date}</td>
                 <td style={tdStyle}>{a.time}</td>
+
                 <td style={tdStyle}>{a.status}</td>
+
                 <td style={tdStyle}>
-                  {a.status === "booked" && (
+                  {a.status === "PENDING" || a.status === "booked" ? (
                     <button
                       onClick={() => handleCancel(a._id)}
-                      style={{
-                        padding: "6px 8px",
-                        borderRadius: 6,
-                        border: "none",
-                        background: "#e74c3c",
-                        color: "#fff",
-                        cursor: "pointer",
-                      }}
+                      style={cancelBtn}
                     >
                       Cancel
                     </button>
+                  ) : (
+                    "-"
                   )}
                 </td>
               </tr>
@@ -99,5 +120,15 @@ export default function AppointmentStatus({ userId }) {
   );
 }
 
+/* ------------------------ Styles ------------------------ */
 const thStyle = { padding: 10, textAlign: "left", fontSize: 14 };
 const tdStyle = { padding: 10, fontSize: 13 };
+
+const cancelBtn = {
+  padding: "6px 8px",
+  borderRadius: 6,
+  border: "none",
+  background: "#e74c3c",
+  color: "#fff",
+  cursor: "pointer",
+};

@@ -29,11 +29,24 @@ export const getCategories = async (req, res) => {
 };
 
 /* ---------------------------------------------------
-   2. DOCTOR CHOOSES CATEGORY (No hospital selection)
+   2. DOCTOR CHOOSES CATEGORY
 --------------------------------------------------- */
 export const chooseCategory = async (req, res) => {
   try {
     const { categoryId } = req.body;
+    const doctor = await User.findById(req.user._id);
+
+    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
+
+    // only doctor allowed
+    if (doctor.role !== "doctor") {
+      return res.status(403).json({ message: "Only doctors can select a category" });
+    }
+
+    // prevent re-select
+    if (doctor.selectedCategory) {
+      return res.status(400).json({ message: "Category already selected" });
+    }
 
     // check if category exists
     const hospital = await Hospital.findOne({ "categories._id": categoryId });
@@ -41,11 +54,9 @@ export const chooseCategory = async (req, res) => {
     if (!hospital)
       return res.status(404).json({ message: "Category not found" });
 
-    const doctor = await User.findById(req.user._id);
-
     doctor.selectedCategory = categoryId;
-    doctor.selectedHospital = hospital._id;    // doctor automatically belongs to this hospital
-    doctor.isVerified = false; // needs admin approval
+    doctor.selectedHospital = hospital._id;
+    doctor.isVerified = false;
     await doctor.save();
 
     res.status(200).json({
@@ -77,7 +88,7 @@ export const getDashboard = async (req, res) => {
         { "categories.$": 1, name: 1 }
       );
 
-      if (hospital) {
+      if (hospital && hospital.categories && hospital.categories[0]) {
         categoryInfo = {
           ...hospital.categories[0]._doc,
           hospitalName: hospital.name
@@ -105,6 +116,10 @@ export const getNurse = async (req, res) => {
   try {
     const doctor = await User.findById(req.user._id);
 
+    if (doctor.role !== "doctor") {
+      return res.status(403).json({ message: "Only doctors can view nurses" });
+    }
+
     if (!doctor.selectedCategory || !doctor.selectedHospital)
       return res.status(400).json({ message: "Select a category first" });
 
@@ -112,7 +127,7 @@ export const getNurse = async (req, res) => {
       role: "nurse",
       selectedCategory: doctor.selectedCategory,
       selectedHospital: doctor.selectedHospital
-    });
+    }).select("-password -otp -refreshToken");
 
     res.status(200).json(nurses);
 
@@ -122,12 +137,16 @@ export const getNurse = async (req, res) => {
 };
 
 /* ---------------------------------------------------
-   5. APPROVE / DISAPPROVE / REJECT NURSE
+   5. APPROVE NURSE
 --------------------------------------------------- */
 export const approveNurse = async (req, res) => {
   try {
     const doctor = await User.findById(req.user._id);
     const nurse = await User.findById(req.params.id);
+
+    if (doctor.role !== "doctor") {
+      return res.status(403).json({ message: "Only doctors can approve nurses" });
+    }
 
     if (!nurse) return res.status(404).json({ message: "Nurse not found" });
 
@@ -147,11 +166,17 @@ export const approveNurse = async (req, res) => {
   }
 };
 
-
+/* ---------------------------------------------------
+   6. DISAPPROVE NURSE
+--------------------------------------------------- */
 export const disapproveNurse = async (req, res) => {
   try {
     const doctor = await User.findById(req.user._id);
     const nurse = await User.findById(req.params.id);
+
+    if (doctor.role !== "doctor") {
+      return res.status(403).json({ message: "Only doctors can disapprove nurses" });
+    }
 
     if (!nurse) return res.status(404).json({ message: "Nurse not found" });
 
@@ -171,11 +196,17 @@ export const disapproveNurse = async (req, res) => {
   }
 };
 
-
+/* ---------------------------------------------------
+   7. REJECT (DELETE) NURSE
+--------------------------------------------------- */
 export const rejectNurse = async (req, res) => {
   try {
     const doctor = await User.findById(req.user._id);
     const nurse = await User.findById(req.params.id);
+
+    if (doctor.role !== "doctor") {
+      return res.status(403).json({ message: "Only doctors can reject nurses" });
+    }
 
     if (!nurse) return res.status(404).json({ message: "Nurse not found" });
 
@@ -193,4 +224,3 @@ export const rejectNurse = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
