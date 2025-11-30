@@ -35,15 +35,31 @@ export const getAllDoctors = async (req, res) => {
   try {
     const tenantId = req.user.tenantId;
 
+    // 1️⃣ Find hospital of this tenant
+    const hospital = await Hospital.findOne({ tenantId }).lean();
+
+    if (!hospital)
+      return res.status(404).json({ message: "Hospital not found" });
+
+    // 2️⃣ Fetch doctors of this hospital
     const doctors = await User.find({
       role: "doctor",
       selectedHospitalTenantId: tenantId
-    })
-      .populate("selectedCategory", "name")
-      .sort({ createdAt: -1 })
-      .select("name email role phone isVerified selectedCategory");
+    }).lean();
 
-    res.status(200).json(doctors);
+    // 3️⃣ Attach category details by matching doctor.selectedCategory
+    const finalDoctors = doctors.map((doc) => {
+      const category = hospital.categories.find(
+        (c) => String(c._id) === String(doc.selectedCategory)
+      );
+
+      return {
+        ...doc,
+        category: category || null   // attach category object
+      };
+    });
+
+    res.status(200).json(finalDoctors);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
