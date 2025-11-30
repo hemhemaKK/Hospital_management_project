@@ -10,7 +10,8 @@ const {
   deleteAppointment,
   getDoctorAppointments,
   updateAppointmentStatus,
-  getReceptionistAppointments
+  getReceptionistAppointments,
+  getNurseAppointments
 } = require("../controllers/appointmentController");
 
 const router = express.Router();
@@ -23,6 +24,7 @@ router.get("/doctors/:categoryId", requireAuth, getDoctorsByCategory);
 router.post("/create", requireAuth, createAppointment);
 
 router.get("/receptionist/all", requireAuth, getReceptionistAppointments);
+router.get("/nurse/appointments", requireAuth, getNurseAppointments);
 
 // DOCTOR SIDE APPOINTMENTS
 router.get("/appointments", requireAuth, getDoctorAppointments);

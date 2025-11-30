@@ -67,12 +67,12 @@ export default function SuperAdminDashboard() {
       });
       const data = res.data ?? [];
       setDoctorsCount
-      (Array.isArray(data) ? data.length : 0);
+        (Array.isArray(data) ? data.length : 0);
       setStats((s) => ({ ...s, admins: Array.isArray(data) ? data.length : 0 }));
     } catch (err) {
       console.error("fetchAdminCount error:", err);
       setDoctorsCount
-      (0);
+        (0);
     }
   }, [token]);
 
@@ -380,250 +380,328 @@ export default function SuperAdminDashboard() {
         )}
 
         {activeSection === "Hospitals" && (
-  <div className="fade-in">
-    <h1 style={{ marginTop: 0 }}>Hospitals</h1>
+          <div className="fade-in">
+            <h1 style={{ marginTop: 0 }}>Hospitals</h1>
 
-    {/* SEARCH BAR */}
-    <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
-      <input
-        placeholder="Search hospitals..."
-        style={{
-          flex: 1,
-          padding: 10,
-          borderRadius: 8,
-          border: "1px solid #e6e9ef",
-        }}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        value={searchTerm}
-      />
-
-      <button
-        className="btn btn-light"
-        onClick={() => {
-          setSearchTerm("");
-          fetchHospitals();
-        }}
-      >
-        Refresh
-      </button>
-    </div>
-
-    {/* CARD LIST */}
-    <div style={{ display: "grid", gap: 16 }}>
-      {hospitals
-        .filter((h) => {
-          const q = searchTerm.toLowerCase();
-          return (
-            !searchTerm ||
-            (h.name || "").toLowerCase().includes(q) ||
-            (h.hospitalName || "").toLowerCase().includes(q) ||
-            (h.tenantId || "").toLowerCase().includes(q) ||
-            (h.address || "").toLowerCase().includes(q)
-          );
-        })
-        .map((h) => {
-          const expanded = expandedId === h._id;
-          const isVerified = String(h.status).toLowerCase() === "verified";
-
-          return (
-            <div
-              key={h._id}
-              onClick={() =>
-                setExpandedId((prev) => (prev === h._id ? null : h._id))
-              }
-              style={{
-                background: "#fff",
-                borderRadius: 10,
-                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
-                padding: 16,
-                cursor: "pointer",
-                transition: "0.2s",
-              }}
-            >
-              {/* CARD TOP */}
-              <div
+            {/* SEARCH BAR */}
+            <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+              <input
+                placeholder="Search hospitals..."
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 6,
+                  flex: 1,
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "1px solid #e6e9ef",
+                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchTerm}
+              />
+
+              <button
+                className="btn btn-light"
+                onClick={() => {
+                  setSearchTerm("");
+                  fetchHospitals();
                 }}
               >
-                <div>
-                  <h3 style={{ margin: 0, fontWeight: 800 }}>
-                    {h.name || h.hospitalName}
-                  </h3>
-                  <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
-                    {h.address}
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    background: "#eef2ff",
-                    color: "#3730a3",
-                    padding: "6px 12px",
-                    borderRadius: 30,
-                    fontWeight: 700,
-                    height: 30,
-                  }}
-                >
-                  {h.status}
-                </div>
-              </div>
-
-              {/* EXPANDED DETAILS */}
-              {expanded && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    paddingTop: 12,
-                    borderTop: "1px solid #e5e7eb",
-                    animation: "fadeIn 0.3s ease",
-                  }}
-                >
-                  {/* READ ONLY FORM */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: 10,
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div>
-                      <label style={{ fontSize: 12 }}>Hospital Name</label>
-                      <input
-                        readOnly
-                        value={h.name}
-                        style={{
-                          width: "100%",
-                          padding: 8,
-                          borderRadius: 6,
-                          border: "1px solid #ddd",
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: 12 }}>Tenant ID</label>
-                      <input
-                        readOnly
-                        value={h.tenantId}
-                        style={{
-                          width: "100%",
-                          padding: 8,
-                          borderRadius: 6,
-                          border: "1px solid #ddd",
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: 12 }}>Email</label>
-                      <input
-                        readOnly
-                        value={h.email}
-                        style={{
-                          width: "100%",
-                          padding: 8,
-                          borderRadius: 6,
-                          border: "1px solid #ddd",
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: 12 }}>Phone</label>
-                      <input
-                        readOnly
-                        value={h.phone}
-                        style={{
-                          width: "100%",
-                          padding: 8,
-                          borderRadius: 6,
-                          border: "1px solid #ddd",
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: 12 }}>License Number</label>
-                      <input
-                        readOnly
-                        value={h.licenseNumber}
-                        style={{
-                          width: "100%",
-                          padding: 8,
-                          borderRadius: 6,
-                          border: "1px solid #ddd",
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: 12 }}>Created At</label>
-                      <input
-                        readOnly
-                        value={new Date(h.createdAt).toLocaleString()}
-                        style={{
-                          width: "100%",
-                          padding: 8,
-                          borderRadius: 6,
-                          border: "1px solid #ddd",
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* ACTION BUTTONS */}
-                  <div style={{ display: "flex", gap: 10 }}>
-                    
-                    {/* 🔥 UPDATED APPROVE BUTTON */}
-                    <button
-                      className="btn btn-success"
-                      disabled={isVerified}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isVerified) return;
-                        handleApproveHospital(h._id);
-                      }}
-                      style={{
-                        opacity: isVerified ? 0.5 : 1,
-                        cursor: isVerified ? "not-allowed" : "pointer",
-                        pointerEvents: isVerified ? "none" : "auto",
-                      }}
-                    >
-                      {isVerified ? "Approved" : "Approve"}
-                    </button>
-
-                    <button
-                      className="btn btn-warning"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRejectHospital(h._id);
-                      }}
-                    >
-                      Reject
-                    </button>
-
-                    <button
-                      className="btn btn-danger"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteHospital(h._id);
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              )}
+                Refresh
+              </button>
             </div>
-          );
-        })}
-    </div>
-  </div>
-)}
+
+            {/* CARD LIST */}
+            <div style={{ display: "grid", gap: 16 }}>
+              {hospitals
+                .filter((h) => {
+                  const q = searchTerm.toLowerCase();
+                  return (
+                    !searchTerm ||
+                    (h.name || "").toLowerCase().includes(q) ||
+                    (h.hospitalName || "").toLowerCase().includes(q) ||
+                    (h.tenantId || "").toLowerCase().includes(q) ||
+                    (h.address || "").toLowerCase().includes(q)
+                  );
+                })
+                .map((h) => {
+                  const expanded = expandedId === h._id;
+                  const isVerified = String(h.status).toLowerCase() === "verified";
+
+                  return (
+                    <div
+                      key={h._id}
+                      onClick={() =>
+                        setExpandedId((prev) => (prev === h._id ? null : h._id))
+                      }
+                      style={{
+                        background: "#fff",
+                        borderRadius: 10,
+                        boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                        padding: 16,
+                        cursor: "pointer",
+                        transition: "0.2s",
+                      }}
+                    >
+                      {/* CARD TOP */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <div>
+                          <h3 style={{ margin: 0, fontWeight: 800 }}>
+                            {h.name || h.hospitalName}
+                          </h3>
+                          <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
+                            {h.address}
+                          </p>
+                        </div>
+
+                        <div
+                          style={{
+                            background: "#eef2ff",
+                            color: "#3730a3",
+                            padding: "6px 12px",
+                            borderRadius: 30,
+                            fontWeight: 700,
+                            height: 30,
+                          }}
+                        >
+                          {h.status}
+                        </div>
+                      </div>
+
+                      {/* EXPANDED SECTION */}
+                      {expanded && (
+                        <div
+                          style={{
+                            marginTop: 12,
+                            paddingTop: 12,
+                            borderTop: "1px solid #e5e7eb",
+                            animation: "fadeIn 0.3s ease",
+                          }}
+                        >
+                          {/* READ-ONLY FORM */}
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "1fr 1fr",
+                              gap: 10,
+                              marginBottom: 14,
+                            }}
+                          >
+                            <div>
+                              <label style={{ fontSize: 12 }}>Hospital Name</label>
+                              <input
+                                readOnly
+                                value={h.name}
+                                style={{
+                                  width: "100%",
+                                  padding: 8,
+                                  borderRadius: 6,
+                                  border: "1px solid #ddd",
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ fontSize: 12 }}>Tenant ID</label>
+                              <input
+                                readOnly
+                                value={h.tenantId}
+                                style={{
+                                  width: "100%",
+                                  padding: 8,
+                                  borderRadius: 6,
+                                  border: "1px solid #ddd",
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ fontSize: 12 }}>Email</label>
+                              <input
+                                readOnly
+                                value={h.email}
+                                style={{
+                                  width: "100%",
+                                  padding: 8,
+                                  borderRadius: 6,
+                                  border: "1px solid #ddd",
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ fontSize: 12 }}>Phone</label>
+                              <input
+                                readOnly
+                                value={h.phone}
+                                style={{
+                                  width: "100%",
+                                  padding: 8,
+                                  borderRadius: 6,
+                                  border: "1px solid #ddd",
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ fontSize: 12 }}>License Number</label>
+                              <input
+                                readOnly
+                                value={h.licenseNumber}
+                                style={{
+                                  width: "100%",
+                                  padding: 8,
+                                  borderRadius: 6,
+                                  border: "1px solid #ddd",
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ fontSize: 12 }}>Created At</label>
+                              <input
+                                readOnly
+                                value={new Date(h.createdAt).toLocaleString()}
+                                style={{
+                                  width: "100%",
+                                  padding: 8,
+                                  borderRadius: 6,
+                                  border: "1px solid #ddd",
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* ------------------ LOCATION IMAGE + LINK + COORDINATES ------------------ */}
+                          {h.location && (
+                            <div style={{ marginBottom: 16 }}>
+                              <h4 style={{ margin: "6px 0" }}>Hospital Location</h4>
+
+                              {/* Location Image */}
+                              {(h.location.imageUrl || h.profilePic) ? (
+                                <img
+                                  src={h.location.imageUrl || h.profilePic}
+                                  alt="Hospital Location"
+                                  style={{
+                                    width: "100%",
+                                    height: 260,
+                                    objectFit: "cover",
+                                    borderRadius: 10,
+                                    marginBottom: 12,
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  style={{
+                                    width: "100%",
+                                    height: 200,
+                                    background: "#f3f4f6",
+                                    borderRadius: 10,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: "#6b7280",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  No image available
+                                </div>
+                              )}
+
+                              {/* Coordinates Section */}
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns: "1fr 1fr",
+                                  gap: 10,
+                                  marginBottom: 10,
+                                }}
+                              >
+                            </div>
+
+                              {/* OPEN IN MAPS BUTTON */}
+                              {(h.location.latitude && h.location.longitude) ? (
+                                <button
+                                  className="btn btn-light"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(
+                                      `https://www.google.com/maps?q=${h.location.latitude},${h.location.longitude}`,
+                                      "_blank"
+                                    );
+                                  }}
+                                >
+                                  📍 View Location on Google Maps
+                                </button>
+                              ) : (
+                                h.address && (
+                                  <button
+                                    className="btn btn-light"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(
+                                        `https://www.google.com/maps?q=${encodeURIComponent(h.address)}`,
+                                        "_blank"
+                                      );
+                                    }}
+                                  >
+                                    🗺️ View Address on Google Maps
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          )}
+
+
+                          {/* ACTION BUTTONS */}
+                          <div style={{ display: "flex", gap: 10 }}>
+                            <button
+                              className="btn btn-success"
+                              disabled={isVerified}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isVerified) handleApproveHospital(h._id);
+                              }}
+                              style={{
+                                opacity: isVerified ? 0.5 : 1,
+                                cursor: isVerified ? "not-allowed" : "pointer",
+                              }}
+                            >
+                              {isVerified ? "Approved" : "Approve"}
+                            </button>
+
+                            <button
+                              className="btn btn-warning"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRejectHospital(h._id);
+                              }}
+                            >
+                              Reject
+                            </button>
+
+                            <button
+                              className="btn btn-danger"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteHospital(h._id);
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
 
 
       </div>

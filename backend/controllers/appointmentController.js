@@ -89,7 +89,7 @@ const createAppointment = async (req, res) => {
     await doctor.save();
 
     return res.status(200).json({
-      message: "Appointment successfully saved inside USER & DOCTOR",
+      message: "Appointment successfully saved",
       appointment,
     });
 
@@ -188,14 +188,17 @@ const getDoctorAppointments = async (req, res) => {
   try {
     const doctor = await User.findById(req.user._id)
       .populate("appointments.user", "name email profilePic")
-      .populate("appointments.category", "name");
+      .populate("appointments.category", "name")
+      .populate("appointments.nurse", "name email profilePic");  // ⭐ FIXED
 
     return res.status(200).json(doctor.appointments);
+
   } catch (err) {
     console.error("getDoctorAppointments ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 /* -------------------------------------------
    8. UPDATE APPOINTMENT STATUS
@@ -204,32 +207,66 @@ const updateAppointmentStatus = async (req, res) => {
   try {
     const doctorId = req.user._id.toString();
     const appointmentId = req.params.appointmentId;
-    const { action } = req.body;
+    const { action, nurseId } = req.body;
 
     const doctor = await User.findById(doctorId);
-    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
-
-    // Find appointment in doctor array
     const appt = doctor.appointments.id(appointmentId);
+
     if (!appt) return res.status(404).json({ message: "Appointment not found" });
 
-    // Update status
+    /* ---- APPOINTMENT LOGIC ---- */
+
     if (action === "accept") appt.status = "DOCTOR_ACCEPTED";
+
     if (action === "reject") appt.status = "REJECTED";
+
+    /* ⭐ ASSIGN NURSE */
+    if (action === "assign_nurse") {
+      appt.nurse = nurseId;
+      appt.status = "NURSE_ASSIGNED";
+
+      const nurse = await User.findById(nurseId);
+
+      if (nurse) {
+        // Store SAME appointment ID inside nurse
+        nurse.appointments.unshift({
+          _id: appointmentId,
+          user: appt.user,
+          doctor: appt.doctor,
+          nurse: nurseId,
+          category: appt.category,
+          hospital: appt.hospital,
+          date: appt.date,
+          time: appt.time,
+          description: appt.description,
+          status: "NURSE_ASSIGNED",
+        });
+
+        await nurse.save();
+      }
+    }
+
+    if (action === "nurse_complete") appt.status = "NURSE_COMPLETED";
+
     if (action === "complete") appt.status = "DOCTOR_COMPLETED";
 
     await doctor.save();
 
-    // Update same appointment for USER
+    /* ---- UPDATE USER ---- */
     const user = await User.findById(appt.user);
     const userAppt = user.appointments.id(appointmentId);
-    if (userAppt) userAppt.status = appt.status;
+
+    if (userAppt) {
+      userAppt.status = appt.status;
+
+      if (nurseId) {
+        userAppt.nurse = nurseId;
+      }
+    }
+
     await user.save();
 
-    res.status(200).json({
-      message: "Status updated successfully",
-      appointment: appt,
-    });
+    return res.status(200).json({ message: "Updated", appointment: appt });
 
   } catch (err) {
     console.error("updateAppointmentStatus ERROR:", err);
@@ -243,13 +280,17 @@ const updateAppointmentStatus = async (req, res) => {
 ----------------------------------------------------- */
 const getReceptionistAppointments = async (req, res) => {
   try {
-    const hospitalId = req.user.selectedHospital;
+    const hospitalId = req.user.selectedHospital;  // receptionist's hospital
 
     if (!hospitalId) {
       return res.status(400).json({ message: "Receptionist has no hospital assigned" });
     }
 
-    const users = await User.find({ selectedHospital: hospitalId })
+    // ⭐ Fetch only USERS from this hospital
+    const users = await User.find({
+      role: "user",
+      selectedHospital: hospitalId
+    })
       .populate("appointments.doctor", "name email profilePic")
       .populate("appointments.category", "name")
       .lean();
@@ -257,9 +298,7 @@ const getReceptionistAppointments = async (req, res) => {
     let allAppointments = [];
 
     users.forEach(user => {
-      const userAppointments = user.appointments || []; // SAFE ✔
-
-      userAppointments.forEach(appt => {
+      (user.appointments || []).forEach(appt => {
         if (appt.hospital?.toString() === hospitalId.toString()) {
           allAppointments.push({
             ...appt,
@@ -282,6 +321,25 @@ const getReceptionistAppointments = async (req, res) => {
   }
 };
 
+/* -------------------------------------------
+   GET NURSE APPOINTMENTS (ONLY THEIR OWN)
+-------------------------------------------- */
+const getNurseAppointments = async (req, res) => {
+  try {
+    const nurseId = req.user._id;
+
+    const nurse = await User.findById(nurseId)
+      .populate("appointments.user", "name email profilePic")
+      .populate("appointments.doctor", "name email profilePic")
+      .populate("appointments.category", "name");
+
+    res.status(200).json(nurse.appointments || []);
+  } catch (err) {
+    console.error("getNurseAppointments ERROR:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 
 
 module.exports = {
@@ -293,5 +351,6 @@ module.exports = {
   deleteAppointment,
   getDoctorAppointments,
   updateAppointmentStatus,
-  getReceptionistAppointments 
+  getReceptionistAppointments,
+  getNurseAppointments
 };
