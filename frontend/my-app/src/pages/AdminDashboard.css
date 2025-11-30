@@ -7,6 +7,74 @@
   padding: 0;
 }
 
+/* NEW: Mobile Header */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #111;
+  padding: 10px 15px;
+  z-index: 1050;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  border-bottom: 1px solid #444;
+}
+
+.mobile-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.mobile-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+}
+
+.mobile-profile-pic {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #4CAF50;
+}
+
+.mobile-user-info h3 {
+  font-size: 14px;
+  margin: 0;
+  color: white;
+  font-weight: bold;
+}
+
+.mobile-user-info p {
+  font-size: 11px;
+  margin: 0;
+  color: #ccc;
+}
+
+.mobile-logout-btn {
+  background: #ff4d4d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mobile-logout-btn:hover {
+  background-color: #ff3333;
+}
+
 /* Sidebar Styles */
 .sidebar {
   width: 250px;
@@ -320,17 +388,30 @@
 
 /* Mobile Responsive Styles */
 @media screen and (max-width: 768px) {
+  /* NEW: Show mobile header */
+  .mobile-header {
+    display: block;
+  }
+
   .hamburger-menu {
     display: flex;
+    top: 10px;
+    left: 10px;
   }
 
   .sidebar {
     width: 280px;
+    top: 60px; /* Account for mobile header */
+    height: calc(100vh - 60px); /* Adjust height for mobile header */
   }
 
   .content-area {
     margin-left: 0;
-    padding: 60px 15px 15px 15px;
+    padding: 120px 15px 15px 15px; /* Increased top padding for mobile header */
+  }
+
+  .content-area.mobile-full {
+    padding: 120px 15px 15px 15px; /* Increased top padding */
   }
 
   .flex-container {
@@ -416,13 +497,35 @@
 }
 
 @media screen and (max-width: 480px) {
+  .mobile-header {
+    padding: 8px 10px;
+  }
+
+  .mobile-profile-pic {
+    width: 30px;
+    height: 30px;
+  }
+
+  .mobile-user-info h3 {
+    font-size: 13px;
+  }
+
+  .mobile-user-info p {
+    font-size: 10px;
+  }
+
+  .mobile-logout-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
   .content-area.mobile-full {
-    padding: 55px 10px 10px 10px;
+    padding: 110px 10px 10px 10px;
   }
 
   .hamburger-menu {
-    top: 10px;
-    left: 10px;
+    top: 8px;
+    left: 8px;
   }
 
   .table {
@@ -456,7 +559,7 @@
   }
 
   .content-area.mobile-full {
-    padding: 55px 8px 8px 8px;
+    padding: 110px 8px 8px 8px;
   }
 
   .table {
@@ -471,6 +574,11 @@
   .table td {
     font-size: 10px;
     padding: 6px 4px;
+  }
+
+  .mobile-logout-btn {
+    padding: 5px 8px;
+    font-size: 10px;
   }
 }
 
