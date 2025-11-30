@@ -588,13 +588,15 @@ const getReceptionistAppointments = async (req, res) => {
       return res.status(400).json({ message: "Receptionist has no hospital assigned" });
     }
 
+    // Load hospital to access its categories
+    const hospital = await Hospital.findById(hospitalId).select("categories");
+
     // Fetch users from this hospital who hold appointments
     const users = await User.find({
       role: "user",
       selectedHospital: hospitalId,
     })
       .populate("appointments.doctor", "name email profilePic")
-      .populate("appointments.category", "name")
       .lean();
 
     let allAppointments = [];
@@ -602,14 +604,32 @@ const getReceptionistAppointments = async (req, res) => {
     users.forEach((user) => {
       (user.appointments || []).forEach((appt) => {
         if (appt.hospital?.toString() === hospitalId.toString()) {
+          
+          // 🔥 Attach full category object manually
+          let categoryObj = null;
+          if (hospital && Array.isArray(hospital.categories)) {
+            categoryObj =
+              hospital.categories.find(
+                (c) => String(c._id) === String(appt.category)
+              ) || null;
+          }
+
           allAppointments.push({
             ...appt,
+            // attach patient data
             user: {
               _id: user._id,
               name: user.name,
               email: user.email,
               profilePic: user.profilePic,
             },
+            // doctor already populated
+            doctor: appt.doctor || null,
+
+            // category we fixed manually
+            category: categoryObj
+              ? categoryObj
+              : { _id: appt.category, name: "Unknown" },
           });
         }
       });
