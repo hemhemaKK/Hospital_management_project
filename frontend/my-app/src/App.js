@@ -13,6 +13,7 @@ import DoctorDashboard from "./pages/doctorDashboard";
 import GoogleCallback from "./pages/GoogleCallback";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import ReceptionistDashboard from "./pages/ReceptionistDashboard";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path="/nurseDashboard" element={<NurseDashboard />} />
         <Route path="/doctorDashboard" element={<DoctorDashboard />} />
+        <Route path="/receptionistDashboard" element={<ReceptionistDashboard />} />
         
         <Route path="/profile" element={<ProfileSettings />} />
 

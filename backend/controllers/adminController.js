@@ -41,7 +41,7 @@ export const getAllDoctors = async (req, res) => {
     })
       .populate("selectedCategory", "name")
       .sort({ createdAt: -1 })
-      .select("name email role phone isApproved selectedCategory");
+      .select("name email role phone isVerified selectedCategory");
 
     res.status(200).json(doctors);
   } catch (err) {
@@ -88,7 +88,7 @@ export const approveDoctors = async (req, res) => {
       return res.status(404).json({ message: "Doctor not found" });
 
     doctor.role = "doctor";
-    doctor.isApproved = true;
+    doctor.isVerified= true;
 
     await doctor.save();
 
@@ -117,11 +117,11 @@ export const toggleDoctorApproval = async (req, res) => {
     if (!doctor)
       return res.status(404).json({ message: "Doctor not found" });
 
-    doctor.isApproved = !doctor.isApproved;
+    doctor.isVerified = !doctor.isVerified;
     await doctor.save();
 
     res.json({
-      message: doctor.isApproved ? "Doctor approved" : "Doctor disapproved",
+      message: doctor.isVerified ? "Doctor approved" : "Doctor disapproved",
       doctor
     });
   } catch (err) {
@@ -248,15 +248,20 @@ export const updateCategory = async (req, res) => {
  */
 export const getAllCategories = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    // ANY ROLE CAN ACCESS (user, nurse, doctor, admin)
+    const tenantId = req.user.selectedHospitalTenantId || req.user.tenantId;
+
+    if (!tenantId)
+      return res.status(400).json({ message: "Tenant ID missing" });
 
     const hospital = await Hospital.findOne({ tenantId });
-    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+    if (!hospital)
+      return res.status(404).json({ message: "Hospital not found" });
 
-    res.json(hospital.categories);
-
+    // Return only category list (SAFE)
+    return res.json(hospital.categories);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
 

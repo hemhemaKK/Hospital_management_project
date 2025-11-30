@@ -11,7 +11,8 @@ const {
   getAllCategories,
   replyToTicket,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  toggleDoctorApproval
 } = require("../controllers/adminController");
 const { requireAuth } = require("../middleware/authMiddleware");
 
@@ -34,6 +35,7 @@ router.delete("/users/:id", requireAuth, deleteUser);
 // Doctor Management
 router.get("/doctors", requireAuth, getAllDoctors);
 router.get("/doctors/pending", requireAuth, getPendingDoctors);
+router.put("/doctors/toggle/:id", requireAuth, toggleDoctorApproval);
 router.put("/doctors/approve/:id", requireAuth, approveDoctors);
 router.delete("/doctors/reject/:id", requireAuth, rejectDoctor);
 

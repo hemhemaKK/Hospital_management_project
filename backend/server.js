@@ -12,13 +12,14 @@ const profileRoutes = require("./routes/profileRoutes");
 const ticketRoutes = require("./routes/ticketRoutes");
 const adminRoutes = require("./routes/adminRoutes"); 
 const reviewRoutes = require("./routes/reviewRoutes")
-const employeeRoutes = require("./routes/doctorRoutes")
-const complaintsRoutes = require("./routes/complaintRoutes")
+const doctorRoutes = require("./routes/doctorRoutes");
+const appointmentRoutes = require("./routes/appointmentRoutes");
 const chatbotRoutes = require("./routes/chatRoutes")
 const superadminRoutes = require("./routes/superadminRoutes")
 const hospitalRoutes = require("./routes/hospitalRoutes");
 const passwordRoutes = require("./routes/passwordRoutes");
 const nurseRoutes = require("./routes/nurseRoutes");
+
 
 const app = express();
 
@@ -47,8 +48,8 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/admin", adminRoutes); 
 app.use("/api/review", reviewRoutes);
-app.use("/api/doctor", employeeRoutes);
-app.use("/api/complaints", complaintsRoutes);
+app.use("/api/doctor", doctorRoutes);
+app.use("/api/appointment", appointmentRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 
 app.use("/api/superadmin", superadminRoutes)

@@ -1,4 +1,4 @@
-/* AdminDashboard.css - Fixed for Mobile */
+/* AdminDashboard.css */
 
 /* Reset and Base Styles */
 * {
@@ -7,16 +7,11 @@
   padding: 0;
 }
 
-html, body {
-  width: 100%;
-  overflow-x: hidden;
-}
-
 /* Sidebar Styles */
 .sidebar {
   width: 250px;
   min-height: 100vh;
-  background-color: #00626aee;
+  background-color: #111;
   padding: 0.5rem;
   display: flex;
   flex-direction: column;
@@ -60,7 +55,7 @@ html, body {
   top: 15px;
   left: 15px;
   z-index: 1100;
-  background: #00626aee;
+  background: #111;
   border: none;
   border-radius: 5px;
   padding: 8px;
@@ -93,7 +88,7 @@ html, body {
 
 .profile-section {
   padding: 1rem 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid #444;
   text-align: center;
   color: #fff;
 }
@@ -121,12 +116,12 @@ html, body {
 }
 
 .menu-item:hover {
-  background-color: #00838f;
+  background-color: #222;
 }
 
 .menu-item.active {
-  color: #fff;
-  background-color: #00838f;
+  color: #4CAF50;
+  background-color: #222;
 }
 
 .bottom-link {
@@ -145,11 +140,11 @@ html, body {
 }
 
 .bottom-link.logout {
-  background-color: #d32f2f;
+  background-color: #ff4d4d;
 }
 
 .bottom-link.logout:hover {
-  background-color: #b71c1c;
+  background-color: #ff3333;
 }
 
 /* Content Area */
@@ -160,13 +155,11 @@ html, body {
   transition: margin-left 0.3s ease;
   min-height: 100vh;
   background-color: #f5f5f5;
-  width: calc(100% - 250px);
 }
 
 .content-area.mobile-full {
   margin-left: 0;
   padding: 60px 15px 15px 15px;
-  width: 100%;
 }
 
 /* Cards and Layout */
@@ -180,32 +173,28 @@ html, body {
   font-weight: bold;
   font-size: 16px;
   min-width: 0;
-  border-left: 4px solid #00838f;
 }
 
-/* FIXED: Mobile-First Table Styles */
+/* Table Styles */
 .table-container {
-  width: 100%;
+  overflow-x: auto;
   margin-top: 15px;
   border-radius: 10px;
   background: white;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
-/* Responsive table that works on mobile */
 .table {
   width: 100%;
   border-collapse: collapse;
   background-color: #fff;
   font-size: 14px;
   color: #333;
-  /* REMOVED min-width to allow natural mobile flow */
+  min-width: 600px; /* Minimum width for horizontal scroll */
 }
 
 .table th {
-  background-color: #00626aee;
+  background-color: #020202;
   color: #fff;
   text-align: left;
   padding: 12px 8px;
@@ -219,7 +208,6 @@ html, body {
   border-bottom: 1px solid #eee;
   vertical-align: top;
   font-size: 13px;
-  word-break: break-word; /* Allow text to wrap */
 }
 
 .table tr:nth-child(even) {
@@ -234,13 +222,6 @@ html, body {
   flex: 1;
   min-width: 0;
   font-size: 14px;
-  width: 100%;
-}
-
-.input-field:focus {
-  border-color: #00838f;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 131, 143, 0.2);
 }
 
 .select-field {
@@ -251,13 +232,6 @@ html, body {
   min-width: 0;
   font-size: 14px;
   background: white;
-  width: 100%;
-}
-
-.select-field:focus {
-  border-color: #00838f;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 131, 143, 0.2);
 }
 
 .btn {
@@ -268,18 +242,16 @@ html, body {
   cursor: pointer;
   margin-right: 5px;
   font-size: 12px;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
   min-height: 36px;
-  white-space: nowrap;
 }
 
 .btn:hover {
   opacity: 0.9;
-  transform: translateY(-1px);
 }
 
 .btn-primary {
-  background-color: #00838f;
+  background-color: #4CAF50;
 }
 
 .btn-warning {
@@ -291,15 +263,15 @@ html, body {
 }
 
 .btn-info {
-  background-color: #00626aee;
+  background-color: #2196F3;
 }
 
 .btn-secondary {
-  background-color: #78909c;
+  background-color: #888;
 }
 
 .btn:disabled {
-  background-color: #b0bec5;
+  background-color: #888;
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -312,12 +284,6 @@ html, body {
   min-height: 80px;
   resize: vertical;
   font-size: 14px;
-}
-
-.textarea-field:focus {
-  border-color: #00838f;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 131, 143, 0.2);
 }
 
 /* Layout Utilities */
@@ -337,12 +303,12 @@ html, body {
 
 /* Status Styles */
 .status-approved {
-  color: #2e7d32;
+  color: green;
   font-weight: bold;
 }
 
 .status-pending {
-  color: #d32f2f;
+  color: red;
   font-weight: bold;
 }
 
@@ -352,7 +318,7 @@ html, body {
   margin-top: 2px;
 }
 
-/* ========== MOBILE STYLES (360px and up) ========== */
+/* Mobile Responsive Styles */
 @media screen and (max-width: 768px) {
   .hamburger-menu {
     display: flex;
@@ -364,12 +330,7 @@ html, body {
 
   .content-area {
     margin-left: 0;
-    padding: 60px 10px 10px 10px;
-    width: 100%;
-  }
-
-  .content-area.mobile-full {
-    padding: 60px 10px 10px 10px;
+    padding: 60px 15px 15px 15px;
   }
 
   .flex-container {
@@ -379,7 +340,6 @@ html, body {
 
   .flex-wrap {
     gap: 10px;
-    flex-direction: column;
   }
 
   .card {
@@ -387,38 +347,31 @@ html, body {
     min-width: auto;
     padding: 15px;
     font-size: 14px;
-    margin-bottom: 8px;
   }
 
-  /* FIXED: Mobile Table Styles */
+  /* Table responsive */
   .table-container {
     margin-top: 10px;
     border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    display: block;
-    width: 100%;
   }
 
   .table {
-    width: auto; /* Allow table to expand naturally */
-    min-width: 100%; /* Ensure it takes full container width */
+    min-width: 500px; /* Smaller minimum width for mobile */
     font-size: 12px;
   }
 
   .table th,
   .table td {
     padding: 8px 6px;
-    font-size: 11px;
-    min-width: 80px; /* Ensure cells don't get too small */
   }
 
   .table th {
     font-size: 11px;
     padding: 10px 6px;
-    background-color: #00626aee;
-    position: relative;
+  }
+
+  .table td {
+    font-size: 11px;
   }
 
   /* Button stack on mobile */
@@ -426,7 +379,6 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    min-width: 100px;
   }
 
   .btn {
@@ -438,15 +390,15 @@ html, body {
     min-height: 32px;
   }
 
-  /* Form elements */
+  /* Form elements full width on mobile */
   .input-field,
   .select-field {
     width: 100%;
     flex: none;
-    font-size: 16px;
+    font-size: 14px; /* Prevent zoom on iOS */
   }
 
-  /* Profile section */
+  /* Profile section adjustments */
   .profile-section {
     padding: 0.8rem 0.5rem;
   }
@@ -461,18 +413,11 @@ html, body {
     padding: 0.8rem;
     font-size: 13px;
   }
-
-  /* Textarea */
-  .textarea-field {
-    font-size: 16px;
-    min-height: 100px;
-  }
 }
 
-/* Extra Small Mobile Devices (360px and below) */
 @media screen and (max-width: 480px) {
   .content-area.mobile-full {
-    padding: 55px 8px 8px 8px;
+    padding: 55px 10px 10px 10px;
   }
 
   .hamburger-menu {
@@ -481,19 +426,13 @@ html, body {
   }
 
   .table {
+    min-width: 400px;
     font-size: 11px;
   }
 
   .table th,
   .table td {
     padding: 6px 4px;
-    font-size: 10px;
-    min-width: 70px;
-  }
-
-  .table th {
-    font-size: 10px;
-    padding: 8px 4px;
   }
 
   .card {
@@ -502,86 +441,46 @@ html, body {
   }
 
   .flex-wrap {
-    gap: 6px;
+    gap: 8px;
   }
 
   .user-info {
-    font-size: 9px;
-  }
-
-  .btn {
     font-size: 10px;
-    padding: 5px 6px;
-    min-height: 30px;
   }
 }
 
-/* Very Small Mobile Devices */
+/* Small mobile devices */
 @media screen and (max-width: 360px) {
   .sidebar {
     width: 100%;
   }
 
   .content-area.mobile-full {
-    padding: 55px 6px 6px 6px;
+    padding: 55px 8px 8px 8px;
   }
 
-  .table th,
-  .table td {
-    padding: 5px 3px;
-    font-size: 9px;
-    min-width: 60px;
+  .table {
+    min-width: 350px;
   }
 
   .table th {
-    font-size: 9px;
-    padding: 7px 3px;
-  }
-
-  .btn {
-    font-size: 9px;
-    padding: 4px 5px;
-    min-height: 28px;
-  }
-}
-
-/* Scrollbar styling */
-.table-container::-webkit-scrollbar {
-  height: 6px;
-}
-
-.table-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.table-container::-webkit-scrollbar-thumb {
-  background: #00838f;
-  border-radius: 3px;
-}
-
-.table-container::-webkit-scrollbar-thumb:hover {
-  background: #00626a;
-}
-
-/* Visual indicator for scrollable tables on mobile */
-@media screen and (max-width: 768px) {
-  .table-container {
-    position: relative;
-  }
-  
-  /* Only show scroll hint if content overflows */
-  .table-container.scrollable::after {
-    content: "💡 Scroll horizontally →";
-    position: absolute;
-    top: -25px;
-    right: 0;
-    background: #00838f;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
     font-size: 10px;
-    opacity: 0.8;
+    padding: 8px 4px;
+  }
+
+  .table td {
+    font-size: 10px;
+    padding: 6px 4px;
   }
 }
 
+/* Ensure proper viewport for mobile */
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Fix for mobile scrolling */
+body {
+  position: relative;
+}

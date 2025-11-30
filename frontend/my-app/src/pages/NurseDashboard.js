@@ -18,15 +18,18 @@ export default function NurseDashboard() {
   const [assignedDoctor, setAssignedDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [appointments, setAppointments] = useState([]);
+  const [prescriptionText, setPrescriptionText] = useState("");
+
   /* --------------------------------------------------------
-     LOAD NURSE + CATEGORIES
+     LOAD NURSE + CATEGORIES + NURSE APPOINTMENTS
   -------------------------------------------------------- */
   useEffect(() => {
     if (!token) return;
 
     const loadData = async () => {
       try {
-        // LOAD NURSE DETAILS
+        // LOAD NURSE PROFILE
         const resUser = await axios.get(`${BASE_URL}/nurse/dashboard`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -48,6 +51,15 @@ export default function NurseDashboard() {
           setAssignedDoctor(resDoctor.data);
         }
 
+        // LOAD APPOINTMENTS ASSIGNED TO THIS NURSE
+        const resAppt = await axios.get(
+          `${BASE_URL}/appointment/nurse/appointments`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setAppointments(resAppt.data);
+
         setLoading(false);
       } catch (err) {
         console.error(err);
@@ -67,10 +79,11 @@ export default function NurseDashboard() {
   };
 
   /* --------------------------------------------------------
-     NURSE CHOOSES CATEGORY
+     NURSE → SELECT CATEGORY
   -------------------------------------------------------- */
   const chooseCategory = async () => {
-    if (!selectedCategoryId) return alert("Please select a category");
+    if (!selectedCategoryId)
+      return alert("Please select a category before submitting.");
 
     try {
       await axios.put(
@@ -81,11 +94,10 @@ export default function NurseDashboard() {
 
       alert("Category selected. Wait for doctor approval.");
 
-      // reload nurse data
+      // Reload nurse data
       const resUser = await axios.get(`${BASE_URL}/nurse/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setUser(resUser.data.user);
     } catch (err) {
       console.error(err);
@@ -94,7 +106,59 @@ export default function NurseDashboard() {
   };
 
   /* --------------------------------------------------------
-     UI: CATEGORY SELECTION
+     MARK APPOINTMENT AS COMPLETED
+  -------------------------------------------------------- */
+  const markAsComplete = async (appointmentId) => {
+    try {
+      await axios.put(
+        `${BASE_URL}/appointment/appointment/${appointmentId}`,
+        { action: "nurse_complete" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("Appointment marked as completed");
+      refreshAppointments();
+    } catch (err) {
+      console.error(err);
+      alert("Error completing appointment");
+    }
+  };
+
+  /* --------------------------------------------------------
+     ADD PRESCRIPTION
+  -------------------------------------------------------- */
+  const addPrescription = async (appointmentId) => {
+    if (!prescriptionText.trim())
+      return alert("Enter prescription before submitting");
+
+    try {
+      await axios.put(
+        `${BASE_URL}/appointments/appointment/${appointmentId}`,
+        {
+          action: "add_prescription",
+          prescription: prescriptionText,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("Prescription added");
+      setPrescriptionText("");
+      refreshAppointments();
+    } catch (err) {
+      console.error(err);
+      alert("Error adding prescription");
+    }
+  };
+
+  const refreshAppointments = async () => {
+    const res = await axios.get(`${BASE_URL}/appointment/nurse/appointments`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setAppointments(res.data);
+  };
+
+  /* --------------------------------------------------------
+     CATEGORY SELECT UI
   -------------------------------------------------------- */
   const renderCategorySelection = () => (
     <div style={{ marginTop: "20px" }}>
@@ -103,7 +167,7 @@ export default function NurseDashboard() {
         value={selectedCategoryId}
         onChange={(e) => setSelectedCategoryId(e.target.value)}
       >
-        <option value="">Select Department</option>
+        <option value="">Select Category</option>
         {categories.map((c) => (
           <option key={c._id} value={c._id}>
             {c.name} ({c.hospitalName})
@@ -118,33 +182,131 @@ export default function NurseDashboard() {
   );
 
   /* --------------------------------------------------------
-     UI: ASSIGNED DOCTOR
+     DOCTOR INFO UI
   -------------------------------------------------------- */
-  const renderDoctorInfo = () => (
-    <div style={doctorBox}>
-      <h3 style={{ color: "#00626aee", marginBottom: "15px" }}>Assigned Doctor</h3>
-      <p><b>Name:</b> {assignedDoctor?.name}</p>
-      <p><b>Email:</b> {assignedDoctor?.email}</p>
-      <p><b>Phone:</b> {assignedDoctor?.phone || "-"}</p>
-      <p><b>Department:</b> {assignedDoctor?.selectedCategory?.name || "-"}</p>
+  const renderDoctorInfo = () =>
+    assignedDoctor ? (
+      <div style={doctorBox}>
+        <h3>Assigned Doctor</h3>
+        <p>
+          <b>Name:</b> {assignedDoctor?.name}
+        </p>
+        <p>
+          <b>Email:</b> {assignedDoctor?.email}
+        </p>
+        <p>
+          <b>Phone:</b> {assignedDoctor?.phone || "-"}
+        </p>
+      </div>
+    ) : (
+      <p>No doctor assigned yet.</p>
+    );
+
+  /* --------------------------------------------------------
+     NURSE APPOINTMENTS UI
+  -------------------------------------------------------- */
+  const renderAppointments = () => (
+    <div>
+      <h2>My Appointments</h2>
+
+      {appointments.length === 0 ? (
+        <p>No appointments assigned to you yet.</p>
+      ) : (
+        appointments.map((appt) => (
+          <div
+            key={appt._id}
+            style={{
+              background: "#fff",
+              padding: "16px",
+              borderRadius: "10px",
+              marginBottom: "16px",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+            }}
+          >
+            <h3>{appt.user?.name}</h3>
+
+            <p>
+              <b>Date:</b> {appt.date}
+            </p>
+            <p>
+              <b>Time:</b> {appt.time}
+            </p>
+            <p>
+              <b>Doctor:</b> {appt.doctor?.name}
+            </p>
+            <p>
+              <b>Description:</b> {appt.description}
+            </p>
+
+            {/* STATUS BADGE */}
+            <p>
+              <b>Status:</b>{" "}
+              <span
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: "6px",
+                  color: "#fff",
+                  background:
+                    appt.status === "NURSE_COMPLETED" ? "green" : "orange",
+                }}
+              >
+                {appt.status}
+              </span>
+            </p>
+
+            {/* DISABLE AFTER COMPLETE */}
+            <button
+              style={{
+                ...completeBtnStyle,
+                opacity: appt.status === "NURSE_COMPLETED" ? 0.5 : 1,
+                cursor:
+                  appt.status === "NURSE_COMPLETED"
+                    ? "not-allowed"
+                    : "pointer",
+              }}
+              disabled={appt.status === "NURSE_COMPLETED"}
+              onClick={() => markAsComplete(appt._id)}
+            >
+              {appt.status === "NURSE_COMPLETED"
+                ? "Completed"
+                : "Mark as Complete"}
+            </button>
+
+            {/* Prescription Input */}
+            <textarea
+              placeholder="Add Prescription..."
+              style={textAreaStyle}
+              value={prescriptionText}
+              onChange={(e) => setPrescriptionText(e.target.value)}
+            />
+
+            <button
+              style={presBtnStyle}
+              onClick={() => addPrescription(appt._id)}
+            >
+              Save Prescription
+            </button>
+          </div>
+        ))
+      )}
     </div>
   );
 
   /* --------------------------------------------------------
-     DASHBOARD MAIN
+     DASHBOARD MAIN VIEW
   -------------------------------------------------------- */
   const renderDashboard = () => (
     <div>
       {!user.selectedCategory ? (
         renderCategorySelection()
       ) : !user.isVerified ? (
-        <p style={{ color: "#ff9800", marginTop: "20px", fontWeight: "bold" }}>
+        <p style={{ color: "orange", marginTop: "20px" }}>
           Waiting for doctor approval...
         </p>
       ) : (
         <>
-          <h3 style={{ marginTop: "30px", color: "#00626aee" }}>Your Assigned Doctor</h3>
-          {assignedDoctor ? renderDoctorInfo() : <p>No doctor assigned yet.</p>}
+          <h3 style={{ marginTop: "30px" }}>Your Assigned Doctor</h3>
+          {renderDoctorInfo()}
         </>
       )}
     </div>
@@ -164,66 +326,58 @@ export default function NurseDashboard() {
               style={profilePicStyle}
             />
             <h3 style={{ color: "#fff" }}>{user?.name}</h3>
-            <p style={{ color: "#ccc" }}>{user?.email}</p>
-            {user?.selectedCategory && (
-              <p style={{ color: "#aaa", fontSize: "12px" }}>
-                Department: {user.selectedCategory.name}
-              </p>
-            )}
+            <p style={{ color: "#aaa" }}>{user?.email}</p>
           </div>
 
-          {["Dashboard", "My Doctor", "Profile"].map((menu) => (
-            <div
-              key={menu}
-              style={menuItemStyle(activeSection === menu)}
-              onClick={() => setActiveSection(menu)}
-            >
-              {menu}
-            </div>
-          ))}
+          {["Dashboard", "My Doctor", "Appointments", "Profile"].map(
+            (menu) => (
+              <div
+                key={menu}
+                style={menuItemStyle(activeSection === menu)}
+                onClick={() => setActiveSection(menu)}
+              >
+                {menu}
+              </div>
+            )
+          )}
         </div>
 
         <div style={{ padding: "0.5rem" }}>
-          <div style={bottomLinkStyle} onClick={handleLogout}>
+          <div style={bottomLinkStyle(false, true)} onClick={handleLogout}>
             Logout
           </div>
         </div>
       </div>
 
       {/* ---------------- CONTENT ---------------- */}
-      <div style={contentAreaStyle}>
+      <div style={{ flex: 1, marginLeft: "250px", padding: "2rem" }}>
         {activeSection === "Dashboard" && renderDashboard()}
-        {activeSection === "My Doctor" && (
-          <div>
-            <h2 style={{ color: "#00626aee", marginBottom: "20px" }}>My Doctor</h2>
-            {assignedDoctor ? renderDoctorInfo() : <p>No doctor assigned yet.</p>}
-          </div>
-        )}
+        {activeSection === "My Doctor" && renderDoctorInfo()}
+        {activeSection === "Appointments" && renderAppointments()}
         {activeSection === "Profile" && <ProfileSettings />}
       </div>
     </div>
   );
 }
 
-/* ====================== STYLES ====================== */
+/* ====================== CSS ====================== */
 
 const sidebarStyle = {
   width: "250px",
-  background: "#00626aee",
+  background: "#111",
   height: "100vh",
   padding: "1rem",
   position: "fixed",
   display: "flex",
   flexDirection: "column",
   justifyContent: "space-between",
-  boxShadow: "2px 0 10px rgba(0,0,0,0.1)",
 };
 
 const profileStyle = {
   textAlign: "center",
   marginBottom: "20px",
-  borderBottom: "1px solid rgba(255,255,255,0.2)",
-  paddingBottom: "15px",
+  borderBottom: "1px solid #444",
+  paddingBottom: "10px",
 };
 
 const profilePicStyle = {
@@ -231,70 +385,75 @@ const profilePicStyle = {
   height: "80px",
   borderRadius: "50%",
   objectFit: "cover",
-  border: "3px solid #00838f",
 };
 
 const menuItemStyle = (active) => ({
-  padding: "12px 15px",
-  margin: "6px 0",
-  borderRadius: "8px",
-  background: active ? "#00838f" : "transparent",
-  color: "#fff",
+  padding: "10px",
+  margin: "8px 0",
+  borderRadius: "6px",
+  background: active ? "#333" : "transparent",
+  color: active ? "#4CAF50" : "#fff",
   cursor: "pointer",
-  fontWeight: "bold",
-  transition: "background-color 0.2s ease",
-  fontSize: "14px",
 });
 
-const bottomLinkStyle = {
-  padding: "12px 15px",
+const bottomLinkStyle = (active, isLogout = false) => ({
+  padding: "10px",
   borderRadius: "8px",
   textAlign: "center",
   color: "#fff",
   cursor: "pointer",
-  background: "#d32f2f",
-  fontWeight: "bold",
-  transition: "background-color 0.2s ease",
-  fontSize: "14px",
-};
-
-const contentAreaStyle = {
-  flex: 1,
-  marginLeft: "250px",
-  padding: "2rem",
-  backgroundColor: "#f5f5f5",
-  minHeight: "100vh",
-};
+  background: isLogout ? "#ff4d4d" : active ? "#222" : "transparent",
+});
 
 const selectStyle = {
-  padding: "10px 12px",
+  padding: "8px",
   marginRight: "10px",
   borderRadius: "6px",
-  border: "1px solid #ccc",
-  fontSize: "14px",
-  minWidth: "250px",
 };
 
 const chooseBtnStyle = {
-  padding: "10px 20px",
-  background: "#00838f",
+  padding: "8px 16px",
+  background: "#4CAF50",
   border: "none",
   color: "white",
   borderRadius: "6px",
   cursor: "pointer",
-  fontWeight: "bold",
-  fontSize: "14px",
-  transition: "background-color 0.2s ease",
 };
 
 const doctorBox = {
   background: "#fff",
-  padding: "25px",
+  padding: "20px",
   borderRadius: "10px",
-  width: "350px",
-  fontSize: "15px",
+  width: "300px",
+  fontSize: "16px",
   boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-  borderLeft: "4px solid #00838f",
 };
 
-/* END */
+const textAreaStyle = {
+  width: "100%",
+  height: "70px",
+  marginTop: "10px",
+  padding: "8px",
+  borderRadius: "6px",
+  border: "1px solid #ccc",
+};
+
+const completeBtnStyle = {
+  padding: "8px 12px",
+  background: "green",
+  color: "white",
+  border: "none",
+  borderRadius: "6px",
+  marginTop: "10px",
+  cursor: "pointer",
+};
+
+const presBtnStyle = {
+  padding: "8px 12px",
+  background: "#3b82f6",
+  color: "white",
+  border: "none",
+  borderRadius: "6px",
+  marginTop: "10px",
+  cursor: "pointer",
+};
