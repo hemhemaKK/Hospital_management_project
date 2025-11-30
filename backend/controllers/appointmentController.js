@@ -96,27 +96,38 @@ const getAvailableSlots = async (req, res) => {
   try {
     const { doctorId, date } = req.params;
 
-    const doctor = await User.findById(doctorId);
+    // Find all users who have appointments with this doctor
+    const users = await User.find({ "appointments.doctor": doctorId });
 
-    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
+    const booked = [];
+    users.forEach((u) => {
+      u.appointments.forEach((a) => {
+        if (a.date === date && a.doctor.toString() === doctorId) {
+          booked.push(a.time);
+        }
+      });
+    });
 
-    const booked = doctor.appointments
-      .filter(a => a.date === date)
-      .map(a => a.time);
-
+    // All possible slots (9:00 - 16:30)
     const slots = [];
     for (let h = 9; h < 17; h++) {
       slots.push(`${h}:00`);
       slots.push(`${h}:30`);
     }
 
-    const free = slots.filter(s => !booked.includes(s));
+    // Available slots = slots not booked
+    const availableSlots = slots.filter((s) => !booked.includes(s));
 
-    res.status(200).json(free);
+    res.status(200).json({
+      availableSlots,
+      bookedSlots: booked, // 🔥 new field for frontend to disable booked ones
+    });
   } catch (err) {
+    console.error("getAvailableSlots ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 /* -------------------------------------------
    5. GET USER APPOINTMENTS
