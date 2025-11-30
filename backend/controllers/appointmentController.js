@@ -1,14 +1,21 @@
 // appointmentController.js
 const User = require("../models/User");
 const Hospital = require("../models/Hospital");
-const mongoose = require("mongoose");
 
 /* ======================================================
    Helpers
 ====================================================== */
 const pushPrescriptionToAppt = (apptDoc, prescriptionObj) => {
   if (!Array.isArray(apptDoc.prescription)) apptDoc.prescription = [];
-  apptDoc.prescription.push(prescriptionObj);
+  // deduplicate by medicineName + dosage + duration + notes
+  const exists = apptDoc.prescription.some(
+    (p) =>
+      p.medicineName === prescriptionObj.medicineName &&
+      p.dosage === prescriptionObj.dosage &&
+      p.duration === prescriptionObj.duration &&
+      (p.notes || "") === (prescriptionObj.notes || "")
+  );
+  if (!exists) apptDoc.prescription.push(prescriptionObj);
 };
 
 const findAndUpdateApptInUser = async (userId, appointmentId, updaterFn) => {
@@ -27,15 +34,11 @@ const findAndUpdateApptInUser = async (userId, appointmentId, updaterFn) => {
 const getCategories = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-
-    if (!user || !user.selectedHospital)
+    if (!user?.selectedHospital)
       return res.status(400).json({ message: "User has no hospital" });
 
-    const hospital = await Hospital.findById(user.selectedHospital).select(
-      "categories"
-    );
-
-    return res.status(200).json(hospital.categories);
+    const hospital = await Hospital.findById(user.selectedHospital).select("categories");
+    return res.status(200).json(hospital?.categories || []);
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
@@ -47,17 +50,14 @@ const getCategories = async (req, res) => {
 const getDoctorsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-
     const doctors = await User.find({
       role: "doctor",
       selectedCategory: categoryId,
       isVerified: true,
       status: "ACTIVE",
     }).select("name email profilePic selectedCategory");
-
     return res.status(200).json(doctors);
   } catch (err) {
-    console.error("getDoctorsByCategory error:", err);
     return res.status(500).json({ message: err.message });
   }
 };
@@ -68,15 +68,12 @@ const getDoctorsByCategory = async (req, res) => {
 const createAppointment = async (req, res) => {
   try {
     const { userId, doctorId, categoryId, date, time, description } = req.body;
-
     if (!userId || !doctorId || !categoryId || !date || !time)
       return res.status(400).json({ message: "Missing fields" });
 
     const user = await User.findById(userId);
     const doctor = await User.findById(doctorId);
-
-    if (!user || !doctor)
-      return res.status(404).json({ message: "User or doctor not found" });
+    if (!user || !doctor) return res.status(404).json({ message: "User or doctor not found" });
 
     const appointment = {
       user: user._id,
@@ -91,22 +88,14 @@ const createAppointment = async (req, res) => {
       createdAt: new Date(),
     };
 
-    // insert into user's array and doctor's array
-    if (!Array.isArray(user.appointments)) user.appointments = [];
-    if (!Array.isArray(doctor.appointments)) doctor.appointments = [];
-
     user.appointments.unshift(appointment);
     doctor.appointments.unshift(appointment);
 
     await user.save();
     await doctor.save();
 
-    return res.status(200).json({
-      message: "Appointment created",
-      appointment,
-    });
+    return res.status(200).json({ message: "Appointment created", appointment });
   } catch (err) {
-    console.error("CREATE APPT ERROR:", err);
     return res.status(500).json({ message: err.message });
   }
 };
@@ -117,20 +106,17 @@ const createAppointment = async (req, res) => {
 const getAvailableSlots = async (req, res) => {
   try {
     const { doctorId, date } = req.params;
-
     const users = await User.find({ "appointments.doctor": doctorId });
-
     const booked = [];
     users.forEach((u) => {
       (u.appointments || []).forEach((a) => {
-        if (a.date === date && a.doctor?.toString() === doctorId) booked.push(a.time);
+        if (a.date === date && String(a.doctor) === doctorId) booked.push(a.time);
       });
     });
 
     const slots = [];
     for (let h = 9; h < 17; h++) {
-      slots.push(`${h}:00`);
-      slots.push(`${h}:30`);
+      slots.push(`${h}:00`, `${h}:30`);
     }
 
     return res.status(200).json({
@@ -138,16 +124,12 @@ const getAvailableSlots = async (req, res) => {
       bookedSlots: booked,
     });
   } catch (err) {
-    console.error("getAvailableSlots ERROR:", err);
     return res.status(500).json({ message: err.message });
   }
 };
 
 /* ======================================================
    5. GET USER APPOINTMENTS
-====================================================== */
-/* ======================================================
-   5. GET USER APPOINTMENTS  (FIXED FOR CATEGORY DISPLAY)
 ====================================================== */
 const getUserAppointments = async (req, res) => {
   try {
@@ -157,70 +139,41 @@ const getUserAppointments = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // fetch hospital categories to map categoryId → categoryObject
     const hospital = await Hospital.findById(user.selectedHospital).select("categories");
 
     const finalAppointments = user.appointments.map((appt) => {
-      let categoryObj = null;
-
-      if (hospital?.categories) {
-        categoryObj = hospital.categories.find(
-          (c) => String(c._id) === String(appt.category)
-        );
-      }
-
-      const obj = appt.toObject();
-      obj.category = categoryObj || { name: "Unknown Category" };
-
-      return obj;
+      const categoryObj = hospital?.categories.find(
+        (c) => String(c._id) === String(appt.category)
+      );
+      return { ...appt.toObject(), category: categoryObj || { name: "Unknown Category" } };
     });
 
     return res.status(200).json(finalAppointments);
   } catch (err) {
-    console.error("getUserAppointments ERROR:", err);
     return res.status(500).json({ message: err.message });
   }
 };
-
 
 /* ======================================================
    6. DELETE APPOINTMENT
 ====================================================== */
 const deleteAppointment = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId);
+    const { userId, appointmentId } = req.params;
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const apptObj = user.appointments.find(
-      (a) => a._id.toString() === req.params.appointmentId
-    );
-    if (!apptObj) return res.status(404).json({ message: "Appointment not found" });
+    const appt = user.appointments.id(appointmentId);
+    if (!appt) return res.status(404).json({ message: "Appointment not found" });
 
-    const doctor = await User.findById(apptObj.doctor);
+    const doctor = await User.findById(appt.doctor);
+    const nurse = appt.nurse ? await User.findById(appt.nurse) : null;
 
-    user.appointments = user.appointments.filter(
-      (a) => a._id.toString() !== req.params.appointmentId
-    );
+    user.appointments.id(appointmentId).remove();
+    if (doctor) doctor.appointments.id(appointmentId)?.remove();
+    if (nurse) nurse.appointments.id(appointmentId)?.remove();
 
-    if (doctor) {
-      doctor.appointments = doctor.appointments.filter(
-        (a) => a._id.toString() !== req.params.appointmentId
-      );
-      await doctor.save();
-    }
-
-    await user.save();
-
-    // Also remove from nurse if exists
-    if (apptObj.nurse) {
-      const nurse = await User.findById(apptObj.nurse);
-      if (nurse) {
-        nurse.appointments = nurse.appointments.filter(
-          (a) => a._id.toString() !== req.params.appointmentId
-        );
-        await nurse.save();
-      }
-    }
+    await Promise.all([user.save(), doctor?.save(), nurse?.save()]);
 
     return res.status(200).json({ message: "Appointment removed" });
   } catch (err) {
@@ -230,7 +183,6 @@ const deleteAppointment = async (req, res) => {
 
 /* ======================================================
    7. GET DOCTOR APPOINTMENTS
-   - improved: attach full category object (from Hospital) so frontend can show category.name
 ====================================================== */
 const getDoctorAppointments = async (req, res) => {
   try {
@@ -238,322 +190,99 @@ const getDoctorAppointments = async (req, res) => {
       .populate("appointments.user", "name email profilePic")
       .populate("appointments.nurse", "name email profilePic");
 
-    // If doctor has a selectedHospital, fetch that hospital's categories to map category id -> object
-    let hospital = null;
-    if (doctor && doctor.selectedHospital) {
-      hospital = await Hospital.findById(doctor.selectedHospital).select("categories");
-    }
+    const hospital = doctor.selectedHospital
+      ? await Hospital.findById(doctor.selectedHospital).select("categories")
+      : null;
 
     const modifiedAppointments = (doctor.appointments || []).map((appt) => {
-      let categoryObj = null;
-      try {
-        if (hospital && Array.isArray(hospital.categories)) {
-          categoryObj =
-            hospital.categories.find((c) => String(c._id) === String(appt.category)) || null;
-        }
-      } catch (e) {
-        categoryObj = null;
-      }
-
-      // ensure plain object
-      const apptObj = appt && appt.toObject ? appt.toObject() : { ...appt };
-      apptObj.category = categoryObj;
-
-      return apptObj;
+      const categoryObj = hospital?.categories.find(
+        (c) => String(c._id) === String(appt.category)
+      );
+      return { ...appt.toObject(), category: categoryObj || { name: "Unknown Category" } };
     });
 
     return res.status(200).json(modifiedAppointments);
   } catch (err) {
-    console.error("getDoctorAppointments ERROR:", err);
     return res.status(500).json({ message: err.message });
   }
 };
 
 /* ======================================================
-   8. UPDATE APPOINTMENT (STATUS + PRESCRIPTION)
-      - role-aware: both doctor and nurse can call add_prescription
-      - prescriptions are synced to doctor / user / nurse appointment docs
-      - assign_nurse copies existing doctor prescriptions into nurse's appt
+   8. UPDATE APPOINTMENT STATUS + PRESCRIPTION
 ====================================================== */
 const updateAppointmentStatus = async (req, res) => {
   try {
-    const actor = await User.findById(req.user._id); // who is calling (doctor or nurse)
+    const actor = await User.findById(req.user._id);
     if (!actor) return res.status(404).json({ message: "Actor not found" });
 
-    const appointmentId = req.params.appointmentId;
+    const { appointmentId } = req.params;
     const { action, nurseId, prescription } = req.body;
 
-    // We will need to update 3 places: doctor, user, nurse (if assigned)
-    // Locate doctor and the appointment inside doctor's appointments (if exists)
-    // Note: if the actor is nurse, we'll find appointment from nurse side
+    // Find doctor, user, nurse (if exists)
+    const doctor = await User.findOne({ role: "doctor", "appointments._id": appointmentId }) || (actor.role === "doctor" ? actor : null);
+    const userOwner = await User.findOne({ "appointments._id": appointmentId, role: { $in: ["user", "patient"] } });
+    const nurse = nurseId ? await User.findById(nurseId) : actor.role === "nurse" ? actor : null;
 
-    // Helper to find doctor who owns the appointment
-    // In many flows doctor is stored in the appt; but to be safe we search the DB for a user containing that appointment id with role doctor
-    const doctorOwner = await User.findOne({
-      role: "doctor",
-      "appointments._id": appointmentId,
-    });
-
-    // allow re-assignment below, so use let
-    let userOwner = await User.findOne({
-      "appointments._id": appointmentId,
-      role: { $in: ["user", "patient", "user"] }, // just match any user document that holds the appt
-    });
-
-    // If doctorOwner not found but actor is doctor, then doctorOwner = actor
-    const doctor = doctorOwner || (actor.role === "doctor" ? actor : null);
-
-    // if userOwner not found, try to find inside doctor's appointment object (appt.user)
-    if (!userOwner && doctor) {
-      const apptFromDoctor = doctor.appointments.id(appointmentId);
-      if (apptFromDoctor && apptFromDoctor.user) {
-        // try to fetch user by id
-        const maybeUser = await User.findById(apptFromDoctor.user);
-        if (maybeUser) userOwner = maybeUser;
-      }
+    if (!doctor && ["accept","reject","assign_nurse","complete","add_prescription"].includes(action)) {
+      return res.status(400).json({ message: "Doctor appointment not found" });
     }
 
-    // find nurse if nurseId provided or if actor is nurse
-    const nurseActorId = actor.role === "nurse" ? actor._id : nurseId || null;
-    let nurse = null;
-    if (nurseActorId) nurse = await User.findById(nurseActorId);
+    // Helper to update appointments in all relevant users
+    const updateAllAppts = async (updater) => {
+      const tasks = [];
+      if (doctor) tasks.push(findAndUpdateApptInUser(doctor._id, appointmentId, updater));
+      if (userOwner) tasks.push(findAndUpdateApptInUser(userOwner._id, appointmentId, updater));
+      if (nurse) tasks.push(findAndUpdateApptInUser(nurse._id, appointmentId, updater));
+      await Promise.all(tasks);
+    };
 
-    /* ---------- ACTION HANDLING ---------- */
+    switch (action) {
+      case "accept":
+        await updateAllAppts((appt) => (appt.status = "DOCTOR_ACCEPTED"));
+        break;
 
-    // If action requires doctor to exist, validate
-    if (
-      ["accept", "assign_nurse", "reject", "complete", "add_prescription"].includes(
-        action
-      ) &&
-      action !== "nurse_complete" &&
-      !doctor
-    ) {
-      return res.status(400).json({ message: "Doctor appointment owner not found" });
-    }
+      case "reject":
+        await updateAllAppts((appt) => (appt.status = "REJECTED"));
+        break;
 
-    // We'll operate primarily on doctor.appt when it exists, otherwise on nurse.appt
-    let apptDoc = null;
-    if (doctor) apptDoc = doctor.appointments.id(appointmentId);
-    if (!apptDoc && nurse) apptDoc = nurse.appointments.id(appointmentId);
+      case "assign_nurse":
+        if (!nurse) return res.status(404).json({ message: "Nurse not found" });
+        await updateAllAppts((appt) => { appt.nurse = nurse._id; appt.status = "NURSE_ASSIGNED"; });
+        break;
 
-    if (!apptDoc) {
-      // Last attempt: find any user that has this appointment
-      const any = await User.findOne({ "appointments._id": appointmentId });
-      if (any) apptDoc = any.appointments.id(appointmentId);
-    }
+      case "nurse_complete":
+        await updateAllAppts((appt) => (appt.status = "NURSE_COMPLETED"));
+        break;
 
-    if (!apptDoc) return res.status(404).json({ message: "Appointment not found in records" });
+      case "complete":
+        await updateAllAppts((appt) => {
+          if (!appt.prescription?.length && appt.status !== "NURSE_COMPLETED")
+            throw new Error("Add prescription first or wait for nurse completion");
+          appt.status = "DOCTOR_COMPLETED";
+        });
+        break;
 
-    /* ---------- Accept / Reject ---------- */
-    if (action === "accept") {
-      apptDoc.status = "DOCTOR_ACCEPTED";
-    }
+      case "add_prescription":
+        if (!prescription?.medicineName || !prescription.dosage || !prescription.duration)
+          return res.status(400).json({ message: "Incomplete prescription payload" });
 
-    if (action === "reject") {
-      apptDoc.status = "REJECTED";
-    }
-
-    /* ---------- Assign Nurse ---------- */
-    if (action === "assign_nurse") {
-      if (!nurseId) return res.status(400).json({ message: "nurseId required" });
-
-      apptDoc.nurse = nurseId;
-      apptDoc.status = "NURSE_ASSIGNED";
-
-      // Ensure nurse has an appointments array and insert a copy with same appointmentId
-      if (!nurse) return res.status(404).json({ message: "Nurse not found" });
-
-      // Create nurse appointment copy (prescribe doctor prescriptions into nurse copy - Option A: copy all existing)
-      // Ensure we don't duplicate if already exists
-      const existing = nurse.appointments.id(appointmentId);
-      if (!existing) {
-        const nurseCopy = {
-          _id: appointmentId,
-          user: apptDoc.user,
-          doctor: apptDoc.doctor,
-          nurse: nurseId,
-          category: apptDoc.category,
-          hospital: apptDoc.hospital,
-          date: apptDoc.date,
-          time: apptDoc.time,
-          description: apptDoc.description,
-          status: "NURSE_ASSIGNED",
-          prescription: Array.isArray(apptDoc.prescription) ? [...apptDoc.prescription] : [],
+        const presObj = {
+          ...prescription,
+          prescribedBy: actor._id,
+          createdAt: new Date(),
         };
 
-        nurse.appointments.unshift(nurseCopy);
-      } else {
-        // update existing nurse copy's status / ensure prescriptions include doctor's
-        existing.status = "NURSE_ASSIGNED";
-        if (!Array.isArray(existing.prescription)) existing.prescription = [];
-        // merge unique prescriptions from doctor into nurse copy (by createdAt + medicineName)
-        const docPres = Array.isArray(apptDoc.prescription) ? apptDoc.prescription : [];
-        docPres.forEach((dp) => {
-          // naive dedupe: compare medicineName + dosage + duration + notes
-          const found = existing.prescription.some(
-            (ep) =>
-              ep.medicineName === dp.medicineName &&
-              ep.dosage === dp.dosage &&
-              ep.duration === dp.duration &&
-              (ep.notes || "") === (dp.notes || "")
-          );
-          if (!found) existing.prescription.push(dp);
-        });
-      }
+        await updateAllAppts((appt) => pushPrescriptionToAppt(appt, presObj));
+        break;
 
-      await nurse.save();
+      default:
+        return res.status(400).json({ message: "Unknown action" });
     }
 
-    /* ---------- Nurse completes (nurse marks completed) ---------- */
-    if (action === "nurse_complete") {
-      // allow only nurse actor to mark nurse_complete OR doctor/nurse with proper assignment
-      if (actor.role !== "nurse" && actor.role !== "doctor") {
-        return res.status(403).json({ message: "Only nurse or doctor can mark nurse_complete" });
-      }
-      apptDoc.status = "NURSE_COMPLETED";
-    }
+    // Return latest appointment from doctor's copy
+    const updatedAppt = doctor?.appointments.id(appointmentId) || userOwner?.appointments.id(appointmentId) || nurse?.appointments.id(appointmentId);
 
-    /* ---------- Doctor completes ---------- */
-    if (action === "complete") {
-      // allow doctor to finalize; require at least one prescription OR nurse has completed
-      const hasPrescription = Array.isArray(apptDoc.prescription) && apptDoc.prescription.length > 0;
-
-      if (!hasPrescription && apptDoc.status !== "NURSE_COMPLETED") {
-        return res.status(400).json({
-          message:
-            "Cannot mark complete: either add prescription first or wait for nurse to complete",
-        });
-      }
-
-      apptDoc.status = "DOCTOR_COMPLETED";
-    }
-
-    /* ---------- Add Prescription (role-aware) ---------- */
-    if (action === "add_prescription") {
-      if (!prescription || !prescription.medicineName || !prescription.dosage || !prescription.duration) {
-        return res.status(400).json({ message: "Incomplete prescription payload" });
-      }
-
-      const presObj = {
-        medicineName: prescription.medicineName,
-        dosage: prescription.dosage,
-        duration: prescription.duration,
-        notes: prescription.notes || "",
-        prescribedBy: actor._id,
-        createdAt: new Date(),
-      };
-
-      // 1) push into doctor's copy (if doctor exists)
-      if (doctor) {
-        const dAppt = doctor.appointments.id(appointmentId);
-        if (dAppt) {
-          if (!Array.isArray(dAppt.prescription)) dAppt.prescription = [];
-          dAppt.prescription.push(presObj);
-        }
-      }
-
-      // 2) push into user's appt
-      if (userOwner) {
-        const uAppt = userOwner.appointments.id(appointmentId);
-        if (uAppt) {
-          if (!Array.isArray(uAppt.prescription)) uAppt.prescription = [];
-          uAppt.prescription.push(presObj);
-        }
-        await userOwner.save();
-      }
-
-      // 3) if nurse assigned, push into nurse's appt
-      if (apptDoc.nurse) {
-        const nurseEntity = await User.findById(apptDoc.nurse);
-        if (nurseEntity) {
-          const nAppt = nurseEntity.appointments.id(appointmentId);
-          if (nAppt) {
-            if (!Array.isArray(nAppt.prescription)) nAppt.prescription = [];
-            nAppt.prescription.push(presObj);
-            await nurseEntity.save();
-          } else {
-            // If nurse doesn't have an appt record yet (shouldn't happen) insert a new copy
-            nurseEntity.appointments.unshift({
-              _id: appointmentId,
-              user: apptDoc.user,
-              doctor: apptDoc.doctor,
-              nurse: nurseEntity._id,
-              category: apptDoc.category,
-              hospital: apptDoc.hospital,
-              date: apptDoc.date,
-              time: apptDoc.time,
-              description: apptDoc.description,
-              status: apptDoc.status,
-              prescription: [presObj],
-            });
-            await nurseEntity.save();
-          }
-        }
-      }
-
-      // If actor is nurse but doctor copy exists, also push into doctor's appt
-      if (actor.role === "nurse" && doctor) {
-        const dAppt2 = doctor.appointments.id(appointmentId);
-        if (dAppt2) {
-          if (!Array.isArray(dAppt2.prescription)) dAppt2.prescription = [];
-          dAppt2.prescription.push(presObj);
-        }
-      }
-    }
-
-    // persist changes: save doctor (if modified)
-    if (doctor) await doctor.save();
-
-    // After doctor.save() + userOwner save (done in add_prescription), ensure userOwner status reflect apptDoc.status
-    if (userOwner) {
-      const userAppt = userOwner.appointments.id(appointmentId);
-      if (userAppt) {
-        userAppt.status = apptDoc.status;
-        if (apptDoc.nurse) userAppt.nurse = apptDoc.nurse;
-      }
-      await userOwner.save();
-    }
-
-    // If appointment has a nurse id, update nurse appointment status to match (already done on assign, but do here to be safe)
-    if (apptDoc.nurse) {
-      const nurseEntity = await User.findById(apptDoc.nurse);
-      if (nurseEntity) {
-        const nAppt = nurseEntity.appointments.id(appointmentId);
-        if (nAppt) {
-          nAppt.status = apptDoc.status;
-          // if doctor added prescription earlier, ensure nurse copy includes them (merge)
-          if (Array.isArray(apptDoc.prescription) && apptDoc.prescription.length > 0) {
-            if (!Array.isArray(nAppt.prescription)) nAppt.prescription = [];
-            apptDoc.prescription.forEach((dp) => {
-              const found = nAppt.prescription.some(
-                (ep) =>
-                  ep.medicineName === dp.medicineName &&
-                  ep.dosage === dp.dosage &&
-                  ep.duration === dp.duration &&
-                  (ep.notes || "") === (dp.notes || "")
-              );
-              if (!found) nAppt.prescription.push(dp);
-            });
-          }
-          await nurseEntity.save();
-        }
-      }
-    }
-
-    // Finally, return the authoritative appointment object (from doctor's copy if exists, otherwise from any owner)
-    let returnAppt = null;
-    if (doctor) {
-      returnAppt = doctor.appointments.id(appointmentId);
-    } else if (nurse) {
-      returnAppt = nurse.appointments.id(appointmentId);
-    } else if (userOwner) {
-      returnAppt = userOwner.appointments.id(appointmentId);
-    }
-
-    return res.status(200).json({
-      message: "Appointment updated successfully",
-      appointment: returnAppt,
-    });
+    return res.status(200).json({ message: "Appointment updated successfully", appointment: updatedAppt });
   } catch (err) {
     console.error("updateAppointmentStatus ERROR:", err);
     return res.status(500).json({ message: err.message });
@@ -567,23 +296,22 @@ const getNurseAppointments = async (req, res) => {
   try {
     const nurse = await User.findById(req.user._id)
       .populate("appointments.user", "name email profilePic")
-      .populate("appointments.doctor", "name email profilePic")
-      .populate("appointments.category", "name");
-
+      .populate("appointments.doctor", "name email profilePic");
     return res.status(200).json(nurse.appointments || []);
   } catch (err) {
-    console.error("Nurse Error:", err);
     return res.status(500).json({ message: err.message });
   }
 };
 
 /* ======================================================
-   GET ALL APPOINTMENTS FOR RECEPTIONIST (HOSPITAL WIDE)
+   10. GET RECEPTIONIST APPOINTMENTS
 ====================================================== */
 const getReceptionistAppointments = async (req, res) => {
   try {
-    const hospitalId = req.user.selectedHospital; // receptionist's hospital
+    const hospitalId = req.user.selectedHospital;
+    if (!hospitalId) return res.status(400).json({ message: "Receptionist has no hospital assigned" });
 
+<<<<<<< HEAD
     if (!hospitalId) {
       return res.status(400).json({ message: "Receptionist has no hospital assigned" });
     }
@@ -596,10 +324,14 @@ const getReceptionistAppointments = async (req, res) => {
       role: "user",
       selectedHospital: hospitalId,
     })
+=======
+    const users = await User.find({ role: "user", selectedHospital: hospitalId })
+>>>>>>> 4503436a (san1)
       .populate("appointments.doctor", "name email profilePic")
       .lean();
 
     let allAppointments = [];
+<<<<<<< HEAD
 
     users.forEach((user) => {
       (user.appointments || []).forEach((appt) => {
@@ -631,14 +363,19 @@ const getReceptionistAppointments = async (req, res) => {
               ? categoryObj
               : { _id: appt.category, name: "Unknown" },
           });
+=======
+    users.forEach((u) => {
+      (u.appointments || []).forEach((appt) => {
+        if (String(appt.hospital) === String(hospitalId)) {
+          allAppointments.push({ ...appt, user: { _id: u._id, name: u.name, email: u.email, profilePic: u.profilePic } });
+>>>>>>> 4503436a (san1)
         }
       });
     });
 
-    res.status(200).json(allAppointments);
+    return res.status(200).json(allAppointments);
   } catch (err) {
-    console.error("Receptionist Appointment Fetch ERROR:", err);
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
 
