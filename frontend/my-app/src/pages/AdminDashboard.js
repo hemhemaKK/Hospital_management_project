@@ -339,7 +339,7 @@ export default function AdminDashboard() {
     const filteredDoctors = doctors.filter((d) => {
       const name = (d.name || "").toLowerCase();
       const email = (d.email || "").toLowerCase();
-      const categoryName = (d.selectedCategory?.name || "").toLowerCase();
+      const categoryName = (d.category?.name || "").toLowerCase();
       const status = d.isVerified ? "approved" : "pending";
 
       const matchesSearch =
@@ -400,7 +400,7 @@ export default function AdminDashboard() {
                 <tr key={d._id}>
                   <td>{d.name}</td>
                   <td>{d.email}</td>
-                  <td>{d.selectedCategory?.name || "-"}</td>
+                  <td>{d.category?.name || "-"}</td>
 
                   {/* FIXED STATUS */}
                   <td>
