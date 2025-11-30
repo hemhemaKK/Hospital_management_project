@@ -1,3 +1,4 @@
+// models/User.js
 const mongoose = require("mongoose");
 
 const reviewSchema = new mongoose.Schema({
@@ -17,8 +18,6 @@ const ticketSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-
-// ⭐ PRESCRIPTION SCHEMA
 const prescriptionSchema = new mongoose.Schema({
   medicineName: { type: String, required: true },
   dosage: { type: String, required: true },
@@ -28,23 +27,18 @@ const prescriptionSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-
-// ⭐ REPORT SCHEMA
 const reportSchema = new mongoose.Schema({
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   content: { type: String, default: "" },
   updatedAt: { type: Date }
 });
 
-
-// ⭐ APPOINTMENT SCHEMA
 const appointmentSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   doctor: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   nurse: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
-  // FIXED
-  category: { type: mongoose.Schema.Types.ObjectId },  
+  category: { type: mongoose.Schema.Types.ObjectId },
   hospital: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital" },
 
   date: String,
@@ -69,8 +63,6 @@ const appointmentSchema = new mongoose.Schema({
 
   createdAt: { type: Date, default: Date.now }
 });
-
-
 
 const userSchema = new mongoose.Schema(
   {
@@ -115,7 +107,6 @@ const userSchema = new mongoose.Schema(
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
 
-    // ⭐ USER SELECTS A HOSPITAL DURING REGISTER
     selectedHospital: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Hospital",
@@ -132,12 +123,11 @@ const userSchema = new mongoose.Schema(
 
     supportTickets: [ticketSchema],
 
-    // ⭐ DOCTOR / NURSE CATEGORY
     selectedCategory: {
       type: mongoose.Schema.Types.ObjectId
     },
 
-    // ⭐ ALL APPOINTMENTS CONNECTED TO THIS USER
+    // ALL APPOINTMENTS CONNECTED TO THIS USER
     appointments: [appointmentSchema]
   },
   { timestamps: true }
