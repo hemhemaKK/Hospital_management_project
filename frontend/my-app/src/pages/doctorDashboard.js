@@ -1,3 +1,4 @@
+// src/pages/DoctorDashboard.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -113,6 +114,7 @@ export default function DoctorDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // refresh nurse list
       const updated = await axios.get(`${BASE_URL}/doctor/nurse`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -126,6 +128,7 @@ export default function DoctorDashboard() {
 
   /* ------------------------------------------
         UPDATE APPOINTMENT
+        payload example: { action: 'accept' } OR { action: 'assign_nurse', nurseId }
   ------------------------------------------- */
   const updateAppointment = async (id, payload) => {
     try {
@@ -135,11 +138,19 @@ export default function DoctorDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      // refresh appointment list after update
       const refreshed = await axios.get(`${BASE_URL}/appointment/appointments`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setAppointments(refreshed.data);
+
+      // if assigning nurse or nurse approvals changed, refresh nurses too
+      if (payload?.action === "assign_nurse") {
+        const resNurse = await axios.get(`${BASE_URL}/doctor/nurse`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setNurses(resNurse.data);
+      }
     } catch (err) {
       console.error(err);
       alert("Failed to update appointment");
@@ -321,8 +332,9 @@ export default function DoctorDashboard() {
                         nurseId: e.target.value,
                       })
                     }
+                    defaultValue=""
                   >
-                    <option>Select Nurse</option>
+                    <option value="">Select Nurse</option>
                     {nurses
                       .filter((n) => n.isVerified)
                       .map((n) => (
@@ -384,9 +396,9 @@ export default function DoctorDashboard() {
   ------------------------------------------- */
   const renderDashboard = () => (
     <div>
-      {!user.selectedCategory ? (
+      {!user?.selectedCategory ? (
         renderCategorySelection()
-      ) : !user.isVerified ? (
+      ) : !user?.isVerified ? (
         <p style={{ color: "orange" }}>Waiting for admin approval...</p>
       ) : (
         <>

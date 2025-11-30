@@ -96,20 +96,8 @@ export default function Appointment() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // all possible slots
-        const allSlots = [];
-        for (let h = 9; h < 17; h++) {
-          allSlots.push(`${h}:00`);
-          allSlots.push(`${h}:30`);
-        }
-
-        const booked = res.data?.bookedSlots || [];
-
-        setAvailableSlots(allSlots.map(slot => ({
-          time: slot,
-          isBooked: booked.includes(slot)
-        })));
-
+        // API returns availableSlots (array of strings). Keep it simple.
+        setAvailableSlots(res.data?.availableSlots || []);
         setSelectedSlot("");
       } catch (err) {
         console.error("Error fetching slots:", err);
@@ -128,6 +116,7 @@ export default function Appointment() {
       const res = await axios.get(`${BASE_URL}/api/appointment/user/${uid}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      // backend populates doctor/category/nurse — set that list
       setAppointments(res.data || []);
     } catch (err) {
       console.error("Error loading appointments:", err);
@@ -166,12 +155,11 @@ export default function Appointment() {
 
       alert(res.data?.message || "Appointment booked");
 
-      if (res.data?.appointment) {
-        setAppointments((prev) => [res.data.appointment, ...prev]);
-      } else {
-        loadAppointments(user._id);
-      }
+      // DON'T insert the raw appointment returned (it may be unpopulated).
+      // Instead re-fetch user's appointments (populated) so front-end shows correct fields.
+      await loadAppointments(user._id);
 
+      // reset form
       setCategoryId("");
       setDoctors([]);
       setDoctorId("");
@@ -194,7 +182,9 @@ export default function Appointment() {
       await axios.delete(`${BASE_URL}/api/appointment/${user._id}/${appointmentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setAppointments((prev) => prev.filter((a) => a._id !== appointmentId));
+
+      // update local list (server-side also removed doctor/nurse copies)
+      setAppointments((prev) => prev.filter((a) => String(a._id) !== String(appointmentId)));
       alert("Appointment cancelled");
     } catch (err) {
       console.error("Cancel failed:", err);
@@ -252,21 +242,20 @@ export default function Appointment() {
           {doctorId && date ? (
             availableSlots.length > 0 ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {availableSlots.map((slotObj) => (
+                {availableSlots.map((slot) => (
                   <button
-                    key={slotObj.time}
+                    key={slot}
                     type="button"
-                    onClick={() => !slotObj.isBooked && setSelectedSlot(slotObj.time)}
-                    disabled={slotObj.isBooked}
+                    onClick={() => setSelectedSlot(slot)}
                     style={{
                       padding: "8px 12px",
                       borderRadius: 6,
-                      border: selectedSlot === slotObj.time ? "2px solid #1976d2" : "1px solid #ccc",
-                      background: slotObj.isBooked ? "#f8d7da" : selectedSlot === slotObj.time ? "#e8f0ff" : "#fff",
-                      cursor: slotObj.isBooked ? "not-allowed" : "pointer",
+                      border: selectedSlot === slot ? "2px solid #1976d2" : "1px solid #ccc",
+                      background: selectedSlot === slot ? "#e8f0ff" : "#fff",
+                      cursor: "pointer",
                     }}
                   >
-                    {slotObj.time}
+                    {slot}
                   </button>
                 ))}
               </div>
@@ -317,7 +306,7 @@ export default function Appointment() {
                   <td style={tdStyle}>{a.category?.name || "-"}</td>
                   <td style={tdStyle}>{a.date}</td>
                   <td style={tdStyle}>{a.time}</td>
-                  <td style={tdStyle}>{a.status}</td>
+                  <td style={tdStyle}>{a.status}{a.nurse ? ` — Nurse: ${a.nurse?.name || a.nurse}` : ""}</td>
                   <td style={tdStyle}>
                     <button onClick={() => handleCancel(a._id)} style={{ padding: "6px 8px", borderRadius: 6, border: "none", background: "#e74c3c", color: "#fff", cursor: "pointer" }}>
                       Cancel

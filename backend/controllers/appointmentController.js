@@ -1,9 +1,11 @@
+// controllers/appointmentController.js
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const Hospital = require("../models/Hospital");
 
-/* -------------------------------------------
-   1. GET ALL CATEGORIES FOR USER
--------------------------------------------- */
+/* ========================================================
+   1. GET CATEGORY LIST
+======================================================== */
 const getCategories = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -15,38 +17,37 @@ const getCategories = async (req, res) => {
     const hospital = await Hospital.findById(user.selectedHospital)
       .select("categories");
 
-    res.status(200).json(hospital.categories);
+    return res.status(200).json(hospital.categories || []);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
 
-/* -------------------------------------------
+/* ========================================================
    2. GET DOCTORS BY CATEGORY
--------------------------------------------- */
+======================================================== */
 const getDoctorsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const tenantId = req.user.selectedHospitalTenantId;
 
     const doctors = await User.find({
       role: "doctor",
       selectedCategory: categoryId,
-      selectedHospitalTenantId: tenantId,
+      selectedHospital: req.user.selectedHospital,
       isVerified: true,
-      status: "ACTIVE"
-    }).select("name email profilePic selectedCategory");
+      status: "ACTIVE",
+    }).select("firstName lastName name email profilePic selectedCategory");
 
-    res.status(200).json(doctors);
+    return res.status(200).json(doctors);
   } catch (err) {
-    console.error("getDoctorsByCategory error:", err);
-    res.status(500).json({ message: err.message });
+    console.error("getDoctorsByCategory ERROR:", err);
+    return res.status(500).json({ message: err.message });
   }
 };
 
-/* -------------------------------------------
-   3. CREATE APPOINTMENT (SAVE TO BOTH)
--------------------------------------------- */
+/* ========================================================
+   3. CREATE APPOINTMENT
+======================================================== */
 const createAppointment = async (req, res) => {
   try {
     const { userId, doctorId, categoryId, date, time, description } = req.body;
@@ -55,7 +56,6 @@ const createAppointment = async (req, res) => {
       return res.status(400).json({ message: "Missing fields" });
     }
 
-    // 1️⃣ Find both user and doctor
     const user = await User.findById(userId);
     const doctor = await User.findById(doctorId);
 
@@ -63,11 +63,13 @@ const createAppointment = async (req, res) => {
       return res.status(404).json({ message: "User or doctor not found" });
     }
 
-    // 2️⃣ Build appointment object
+    const apptId = new mongoose.Types.ObjectId();
+
     const appointment = {
+      _id: apptId,
       user: user._id,
       doctor: doctor._id,
-      category: categoryId,
+      category: new mongoose.Types.ObjectId(categoryId),
       hospital: user.selectedHospital,
       date,
       time,
@@ -76,220 +78,187 @@ const createAppointment = async (req, res) => {
       createdAt: new Date(),
     };
 
-    // 3️⃣ SAFETY CHECK: If arrays do not exist, create them
-    if (!Array.isArray(user.appointments)) user.appointments = [];
-    if (!Array.isArray(doctor.appointments)) doctor.appointments = [];
-
-    // 4️⃣ Save inside USER
     user.appointments.unshift(appointment);
-    await user.save();
-
-    // 5️⃣ Save inside DOCTOR
     doctor.appointments.unshift(appointment);
+
+    await user.save();
     await doctor.save();
 
     return res.status(200).json({
-      message: "Appointment successfully saved",
+      message: "Appointment created successfully",
       appointment,
     });
-
   } catch (err) {
     console.error("CREATE APPT ERROR:", err);
     return res.status(500).json({ message: err.message });
   }
 };
 
-/* -------------------------------------------
+/* ========================================================
    4. GET AVAILABLE SLOTS
--------------------------------------------- */
+======================================================== */
 const getAvailableSlots = async (req, res) => {
   try {
     const { doctorId, date } = req.params;
 
-    // Find all users who have appointments with this doctor
     const users = await User.find({ "appointments.doctor": doctorId });
 
     const booked = [];
+
     users.forEach((u) => {
       u.appointments.forEach((a) => {
-        if (a.date === date && a.doctor.toString() === doctorId) {
+        if (a.date === date && String(a.doctor) === String(doctorId)) {
           booked.push(a.time);
         }
       });
     });
 
-    // All possible slots (9:00 - 16:30)
     const slots = [];
     for (let h = 9; h < 17; h++) {
       slots.push(`${h}:00`);
       slots.push(`${h}:30`);
     }
 
-    // Available slots = slots not booked
     const availableSlots = slots.filter((s) => !booked.includes(s));
 
-    res.status(200).json({
-      availableSlots,
-      bookedSlots: booked, // 🔥 new field for frontend to disable booked ones
-    });
+    return res.status(200).json({ availableSlots, bookedSlots: booked });
   } catch (err) {
     console.error("getAvailableSlots ERROR:", err);
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
 
-
-/* -------------------------------------------
+/* ========================================================
    5. GET USER APPOINTMENTS
--------------------------------------------- */
+======================================================== */
 const getUserAppointments = async (req, res) => {
   try {
     const user = await User.findById(req.params.userId)
-      .populate("appointments.doctor", "name email profilePic")
-      .populate("appointments.category", "name");
+      .populate("appointments.doctor", "firstName lastName name email profilePic")
+      .populate("appointments.category", "name")
+      .populate("appointments.nurse", "firstName lastName name email profilePic");
 
-    res.status(200).json(user.appointments);
+    return res.status(200).json(user.appointments || []);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("getUserAppointments ERROR:", err);
+    return res.status(500).json({ message: err.message });
   }
 };
 
-/* -------------------------------------------
-   6. DELETE APPOINTMENT (USER SIDE)
--------------------------------------------- */
+/* ========================================================
+   6. DELETE USER APPOINTMENT
+======================================================== */
 const deleteAppointment = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId);
-    const doctor = await User.findById(user.appointments.find(a => a._id.toString() === req.params.appointmentId)?.doctor);
+    const { userId, appointmentId } = req.params;
+
+    const user = await User.findById(userId);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const appt = user.appointments.id(appointmentId);
+    const doctorId = appt?.doctor;
+    const nurseId = appt?.nurse;
 
     user.appointments = user.appointments.filter(
-      a => a._id.toString() !== req.params.appointmentId
+      (a) => String(a._id) !== appointmentId
     );
-
-    if (doctor) {
-      doctor.appointments = doctor.appointments.filter(
-        a => a._id.toString() !== req.params.appointmentId
-      );
-      await doctor.save();
-    }
-
     await user.save();
 
-    res.status(200).json({ message: "Appointment removed" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+    if (doctorId) {
+      const doc = await User.findById(doctorId);
+      if (doc) {
+        doc.appointments = doc.appointments.filter(
+          (a) => String(a._id) !== appointmentId
+        );
+        await doc.save();
+      }
+    }
 
-/* -------------------------------------------
-   7. GET LOGGED-IN DOCTOR APPOINTMENTS
--------------------------------------------- */
-const getDoctorAppointments = async (req, res) => {
-  try {
-    const doctor = await User.findById(req.user._id)
-      .populate("appointments.user", "name email profilePic")
-      .populate("appointments.category", "name")
-      .populate("appointments.nurse", "name email profilePic");  // ⭐ FIXED
-
-    return res.status(200).json(doctor.appointments);
-
-  } catch (err) {
-    console.error("getDoctorAppointments ERROR:", err);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-
-/* -------------------------------------------
-   8. UPDATE APPOINTMENT STATUS
--------------------------------------------- */
-const updateAppointmentStatus = async (req, res) => {
-  try {
-    const doctorId = req.user._id.toString();
-    const appointmentId = req.params.appointmentId;
-    const { action, nurseId } = req.body;
-
-    const doctor = await User.findById(doctorId);
-    const appt = doctor.appointments.id(appointmentId);
-
-    if (!appt) return res.status(404).json({ message: "Appointment not found" });
-
-    /* ---- APPOINTMENT LOGIC ---- */
-
-    if (action === "accept") appt.status = "DOCTOR_ACCEPTED";
-
-    if (action === "reject") appt.status = "REJECTED";
-
-    /* ⭐ ASSIGN NURSE */
-    if (action === "assign_nurse") {
-      appt.nurse = nurseId;
-      appt.status = "NURSE_ASSIGNED";
-
+    if (nurseId) {
       const nurse = await User.findById(nurseId);
-
       if (nurse) {
-        // Store SAME appointment ID inside nurse
-        nurse.appointments.unshift({
-          _id: appointmentId,
-          user: appt.user,
-          doctor: appt.doctor,
-          nurse: nurseId,
-          category: appt.category,
-          hospital: appt.hospital,
-          date: appt.date,
-          time: appt.time,
-          description: appt.description,
-          status: "NURSE_ASSIGNED",
-        });
-
+        nurse.appointments = nurse.appointments.filter(
+          (a) => String(a._id) !== appointmentId
+        );
         await nurse.save();
       }
     }
 
-    if (action === "nurse_complete") appt.status = "NURSE_COMPLETED";
-
-    if (action === "complete") appt.status = "DOCTOR_COMPLETED";
-
-    await doctor.save();
-
-    /* ---- UPDATE USER ---- */
-    const user = await User.findById(appt.user);
-    const userAppt = user.appointments.id(appointmentId);
-
-    if (userAppt) {
-      userAppt.status = appt.status;
-
-      if (nurseId) {
-        userAppt.nurse = nurseId;
-      }
-    }
-
-    await user.save();
-
-    return res.status(200).json({ message: "Updated", appointment: appt });
-
+    return res.status(200).json({ message: "Appointment removed" });
   } catch (err) {
-    console.error("updateAppointmentStatus ERROR:", err);
-    res.status(500).json({ message: err.message });
+    console.error("deleteAppointment ERROR:", err);
+    return res.status(500).json({ message: err.message });
   }
 };
 
-
-/* ----------------------------------------------------
-   GET ALL APPOINTMENTS FOR RECEPTIONIST (HOSPITAL WIDE)
------------------------------------------------------ */
-const getReceptionistAppointments = async (req, res) => {
+/* ========================================================
+   7. GET DOCTOR'S OWN APPOINTMENTS
+======================================================== */
+const getDoctorAppointments = async (req, res) => {
   try {
-    const hospitalId = req.user.selectedHospital;  // receptionist's hospital
+    const doctor = await User.findById(req.user._id)
+      .populate("appointments.user", "firstName lastName name email profilePic")
+      .populate("appointments.category", "name")
+      .populate("appointments.nurse", "firstName lastName name email profilePic");
 
-    if (!hospitalId) {
-      return res.status(400).json({ message: "Receptionist has no hospital assigned" });
+    return res.status(200).json(doctor.appointments || []);
+  } catch (err) {
+    console.error("getDoctorAppointments ERROR:", err);
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+/* ========================================================
+   8. UPDATE APPOINTMENT STATUS
+======================================================== */
+const updateAppointmentStatus = async (req, res) => {
+  try {
+    const doctor = await User.findById(req.user._id);
+    const { appointmentId } = req.params;
+    const { action, nurseId } = req.body;
+
+    const appt = doctor.appointments.id(appointmentId);
+    if (!appt) return res.status(404).json({ message: "Appointment not found" });
+
+    if (action === "accept") appt.status = "DOCTOR_ACCEPTED";
+    else if (action === "reject") appt.status = "REJECTED";
+    else if (action === "assign_nurse") {
+      if (!nurseId) return res.status(400).json({ message: "nurseId required" });
+      appt.nurse = nurseId;
+      appt.status = "NURSE_ASSIGNED";
+    } else if (action === "nurse_complete") appt.status = "NURSE_COMPLETED";
+    else if (action === "complete") appt.status = "DOCTOR_COMPLETED";
+
+    await doctor.save();
+
+    const user = await User.findById(appt.user);
+    if (user) {
+      const userCopy = user.appointments.id(appointmentId);
+      if (userCopy) {
+        userCopy.status = appt.status;
+        if (appt.nurse) userCopy.nurse = appt.nurse;
+      }
+      await user.save();
     }
 
-    // ⭐ Fetch only USERS from this hospital
+    return res.status(200).json({ message: "Updated", appointment: appt });
+  } catch (err) {
+    console.error("updateAppointmentStatus ERROR:", err);
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+/* ========================================================
+   9. RECEPTIONIST: FULL HOSPITAL APPOINTMENTS
+======================================================== */
+const getReceptionistAppointments = async (req, res) => {
+  try {
+    const hospitalId = req.user.selectedHospital;
+
     const users = await User.find({
       role: "user",
-      selectedHospital: hospitalId
+      selectedHospital: hospitalId,
     })
       .populate("appointments.doctor", "name email profilePic")
       .populate("appointments.category", "name")
@@ -297,50 +266,43 @@ const getReceptionistAppointments = async (req, res) => {
 
     let allAppointments = [];
 
-    users.forEach(user => {
-      (user.appointments || []).forEach(appt => {
-        if (appt.hospital?.toString() === hospitalId.toString()) {
-          allAppointments.push({
-            ...appt,
-            user: {
-              _id: user._id,
-              name: user.name,
-              email: user.email,
-              profilePic: user.profilePic
-            }
-          });
-        }
+    users.forEach((u) => {
+      (u.appointments || []).forEach((a) => {
+        allAppointments.push({
+          ...a,
+          user: {
+            _id: u._id,
+            name: u.name,
+            email: u.email,
+            profilePic: u.profilePic,
+          },
+        });
       });
     });
 
-    res.status(200).json(allAppointments);
-
+    return res.status(200).json(allAppointments);
   } catch (err) {
-    console.error("Receptionist Appointment Fetch ERROR:", err);
-    res.status(500).json({ message: err.message });
+    console.error("Receptionist ERROR:", err);
+    return res.status(500).json({ message: err.message });
   }
 };
 
-/* -------------------------------------------
-   GET NURSE APPOINTMENTS (ONLY THEIR OWN)
--------------------------------------------- */
+/* ========================================================
+   10. NURSE: OWN APPOINTMENTS
+======================================================== */
 const getNurseAppointments = async (req, res) => {
   try {
-    const nurseId = req.user._id;
-
-    const nurse = await User.findById(nurseId)
+    const nurse = await User.findById(req.user._id)
       .populate("appointments.user", "name email profilePic")
       .populate("appointments.doctor", "name email profilePic")
       .populate("appointments.category", "name");
 
-    res.status(200).json(nurse.appointments || []);
+    return res.status(200).json(nurse.appointments || []);
   } catch (err) {
     console.error("getNurseAppointments ERROR:", err);
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
-
-
 
 module.exports = {
   getCategories,
@@ -352,5 +314,5 @@ module.exports = {
   getDoctorAppointments,
   updateAppointmentStatus,
   getReceptionistAppointments,
-  getNurseAppointments
+  getNurseAppointments,
 };
