@@ -28,7 +28,7 @@ export default function Login() {
       if (user.role === "admin") return navigate("/admindashboard");
       if (user.role === "doctor") return navigate("/doctorDashboard");
       if (user.role === "nurse") return navigate("/nurseDashboard");
-      if (user.role === "receptionist") return navigate("/receptionDashboard");
+      if (user.role === "receptionist") return navigate("/receptionistDashboard");
       if (user.role === "pharmacist") return navigate("/pharmacistDashboard");
 
       navigate("/dashboard");

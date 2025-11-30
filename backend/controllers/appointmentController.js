@@ -216,6 +216,49 @@ const updateAppointmentStatus = async (req, res) => {
   }
 };
 
+
+/* ----------------------------------------------------
+   GET ALL APPOINTMENTS FOR RECEPTIONIST (HOSPITAL WIDE)
+----------------------------------------------------- */
+const getReceptionistAppointments = async (req, res) => {
+  try {
+    const hospitalId = req.user.selectedHospital;   // ⭐ Receptionist hospital
+
+    if (!hospitalId) {
+      return res.status(400).json({ message: "Receptionist has no hospital assigned" });
+    }
+
+    // Find all users who have appointments under the same hospital
+    const users = await User.find({ "appointments.hospital": hospitalId })
+      .populate("appointments.user", "name email profilePic")
+      .populate("appointments.doctor", "name email")
+      .populate("appointments.category", "name");
+
+    let allAppointments = [];
+
+    users.forEach(user => {
+      user.appointments.forEach(appt => {
+        if (appt.hospital && appt.hospital.toString() === hospitalId.toString()) {
+          allAppointments.push({
+            ...appt.toObject(),
+            user: {
+              _id: user._id,
+              name: user.name,
+              email: user.email
+            }
+          });
+        }
+      });
+    });
+
+    res.status(200).json(allAppointments);
+  } catch (err) {
+    console.error("Receptionist Appointment Fetch ERROR:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
 module.exports = {
   getCategories,
   getDoctorsByCategory,
@@ -225,4 +268,5 @@ module.exports = {
   deleteAppointment,
   getDoctorAppointments,
   updateAppointmentStatus,
+  getReceptionistAppointments 
 };
