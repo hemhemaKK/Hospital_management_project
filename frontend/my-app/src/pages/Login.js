@@ -174,7 +174,7 @@ const layoutWrapper = {
 
 const leftPanel = {
   flex: 1,
-  background: "linear-gradient(135deg, #00626a, #00838f)",
+  background: "linear-gradient(135deg, #013c41ff, #00747eff)",
   color: "white",
   display: "flex",
   flexDirection: "column",

@@ -73,7 +73,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={{ width: "100vw", overflowX: "hidden", fontFamily: "Inter, sans-serif" }}>
+    <div style={{ width: "90vw",margin:"auto", overflowX: "hidden", fontFamily: "Inter, sans-serif" }}>
       <Navbar />
 
       {/* ---------------------------- HERO SECTION ---------------------------- */}
@@ -104,16 +104,16 @@ export default function Home() {
             style={{
               fontSize: isMobile ? "2rem" : "3.5rem",
               fontWeight: "800",
-              color: "#004d53",
+              color: "#003639ff",
               lineHeight: "1.2",
             }}
           >
-            HOSPITAL <br /> MANAGEMENT <br /> SYSTEM
+            ONE SYSTEM, <br /> EVERY HOSPITAL
           </h1>
 
           <p
             style={{
-              color: "#555",
+              color: "#3a3838ff",
               fontSize: isMobile ? "1rem" : "1.1rem",
               marginTop: "1rem",
               marginBottom: "2rem",
@@ -151,7 +151,7 @@ export default function Home() {
             <button
               style={{
                 padding: "0.9rem 1.8rem",
-                border: "2px solid #00626a",
+                border: "2px solid #00383dff",
                 background: "white",
                 borderRadius: "10px",
                 color: "#00626a",

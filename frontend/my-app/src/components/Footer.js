@@ -26,7 +26,7 @@ export default function Footer() {
   const footerColumn = {
     flex: "1",
     minWidth: isMobile ? "90%" : "220px",
-    background: "#b2ebf2", // UPDATED: light cyan background
+    background: "#bcffffff", // UPDATED: light cyan background
     padding: isMobile ? "15px" : "20px",
     borderRadius: "10px",
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
@@ -51,7 +51,7 @@ export default function Footer() {
         <div style={footerColumn}>
           <div>
             <h4 style={footerHeading}>Contact Us</h4>
-            <p>Email: support@makemycity.com</p>
+            <p>Email: support@OneSystemEveryHospital.com</p>
             <p>Phone: +91 9876543210</p>
           </div>
         </div>
@@ -110,7 +110,7 @@ export default function Footer() {
       </div>
 
       <p style={footerCopy}>
-        &copy; {new Date().getFullYear()} <strong>Make My City</strong>. All Rights Reserved.
+        &copy; {new Date().getFullYear()} <strong>OneSystemEveryHospital</strong>. All Rights Reserved.
       </p>
     </footer>
   );
@@ -118,8 +118,8 @@ export default function Footer() {
 
 // Base Styles
 const footerStyle = {
-  backgroundColor: "#00838f", // dark teal background
-  color: "rgba(0, 77, 82, 1)",
+  backgroundColor: "#005a62ff", // dark teal background
+  color: "rgba(0, 79, 84, 1)",
   padding: "2rem 1.5rem",
   marginTop: "3rem",
   boxShadow: "0 -2px 10px rgba(0,0,0,0.1)",
