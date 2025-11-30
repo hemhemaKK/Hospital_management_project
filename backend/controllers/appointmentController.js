@@ -51,41 +51,51 @@ const createAppointment = async (req, res) => {
   try {
     const { userId, doctorId, categoryId, date, time, description } = req.body;
 
-    if (!userId || !doctorId || !categoryId || !date || !time)
+    if (!userId || !doctorId || !categoryId || !date || !time) {
       return res.status(400).json({ message: "Missing fields" });
+    }
 
+    // 1️⃣ Find both user and doctor
     const user = await User.findById(userId);
     const doctor = await User.findById(doctorId);
 
-    if (!user || !doctor)
+    if (!user || !doctor) {
       return res.status(404).json({ message: "User or doctor not found" });
+    }
 
+    // 2️⃣ Build appointment object
     const appointment = {
-      user: userId,
-      doctor: doctorId,
+      user: user._id,
+      doctor: doctor._id,
       category: categoryId,
       hospital: user.selectedHospital,
       date,
       time,
       description,
       status: "PENDING",
+      createdAt: new Date(),
     };
 
-    // ⭐ Save in USER and DOCTOR
-    user.appointments.unshift(appointment);
-    doctor.appointments.unshift(appointment);
+    // 3️⃣ SAFETY CHECK: If arrays do not exist, create them
+    if (!Array.isArray(user.appointments)) user.appointments = [];
+    if (!Array.isArray(doctor.appointments)) doctor.appointments = [];
 
+    // 4️⃣ Save inside USER
+    user.appointments.unshift(appointment);
     await user.save();
+
+    // 5️⃣ Save inside DOCTOR
+    doctor.appointments.unshift(appointment);
     await doctor.save();
 
-    res.status(200).json({
-      message: "Appointment booked successfully",
+    return res.status(200).json({
+      message: "Appointment successfully saved inside USER & DOCTOR",
       appointment,
     });
 
   } catch (err) {
     console.error("CREATE APPT ERROR:", err);
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
 
@@ -233,29 +243,31 @@ const updateAppointmentStatus = async (req, res) => {
 ----------------------------------------------------- */
 const getReceptionistAppointments = async (req, res) => {
   try {
-    const hospitalId = req.user.selectedHospital;   // ⭐ Receptionist hospital
+    const hospitalId = req.user.selectedHospital;
 
     if (!hospitalId) {
       return res.status(400).json({ message: "Receptionist has no hospital assigned" });
     }
 
-    // Find all users who have appointments under the same hospital
-    const users = await User.find({ "appointments.hospital": hospitalId })
-      .populate("appointments.user", "name email profilePic")
-      .populate("appointments.doctor", "name email")
-      .populate("appointments.category", "name");
+    const users = await User.find({ selectedHospital: hospitalId })
+      .populate("appointments.doctor", "name email profilePic")
+      .populate("appointments.category", "name")
+      .lean();
 
     let allAppointments = [];
 
     users.forEach(user => {
-      user.appointments.forEach(appt => {
-        if (appt.hospital && appt.hospital.toString() === hospitalId.toString()) {
+      const userAppointments = user.appointments || []; // SAFE ✔
+
+      userAppointments.forEach(appt => {
+        if (appt.hospital?.toString() === hospitalId.toString()) {
           allAppointments.push({
-            ...appt.toObject(),
+            ...appt,
             user: {
               _id: user._id,
               name: user.name,
-              email: user.email
+              email: user.email,
+              profilePic: user.profilePic
             }
           });
         }
@@ -263,11 +275,13 @@ const getReceptionistAppointments = async (req, res) => {
     });
 
     res.status(200).json(allAppointments);
+
   } catch (err) {
     console.error("Receptionist Appointment Fetch ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 
 module.exports = {

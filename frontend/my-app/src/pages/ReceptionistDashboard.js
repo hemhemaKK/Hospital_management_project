@@ -14,7 +14,7 @@ export default function ReceptionistDashboard() {
   const [loading, setLoading] = useState(true);
 
   /* -----------------------------------------------
-        LOAD ALL APPOINTMENTS (Hospital Wide)
+        LOAD ALL APPOINTMENTS
   ------------------------------------------------ */
   useEffect(() => {
     if (!token) return;
@@ -23,13 +23,11 @@ export default function ReceptionistDashboard() {
 
   const fetchAllAppointments = async () => {
     try {
-      const res = await axios.get(
-        `${BASE_URL}/appointment/receptionist/all`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setAppointments(res.data);
+      const res = await axios.get(`${BASE_URL}/appointment/receptionist/all`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setAppointments(res.data || []);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching appointments:", err);
@@ -38,7 +36,7 @@ export default function ReceptionistDashboard() {
   };
 
   /* -----------------------------------------------
-        SEARCH & FILTER
+        SEARCH FILTER
   ------------------------------------------------ */
   const filteredAppointments = appointments.filter((a) => {
     const term = searchTerm.toLowerCase();
@@ -60,7 +58,7 @@ export default function ReceptionistDashboard() {
   };
 
   /* -----------------------------------------------
-        Appointments Table UI
+        APPOINTMENT TABLE
   ------------------------------------------------ */
   const renderAppointmentTable = () => (
     <div>
@@ -68,7 +66,7 @@ export default function ReceptionistDashboard() {
 
       <input
         type="text"
-        placeholder="Search by patient, doctor, category, date..."
+        placeholder="Search patient, doctor, category, date..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         style={{
@@ -96,13 +94,12 @@ export default function ReceptionistDashboard() {
           {filteredAppointments.length > 0 ? (
             filteredAppointments.map((a, i) => (
               <tr key={a._id} style={trStyle(i)}>
-                <td style={tdStyle}>{a.user?.name}</td>
-                <td style={tdStyle}>{a.doctor?.name}</td>
-                <td style={tdStyle}>{a.category?.name}</td>
+                <td style={tdStyle}>{a.user?.name || "Unknown"}</td>
+                <td style={tdStyle}>{a.doctor?.name || "Unknown"}</td>
+                <td style={tdStyle}>{a.category?.name || "N/A"}</td>
                 <td style={tdStyle}>{a.date}</td>
                 <td style={tdStyle}>{a.time}</td>
 
-                {/* STATUS BADGE */}
                 <td style={tdStyle}>
                   <span
                     style={{
@@ -140,7 +137,7 @@ export default function ReceptionistDashboard() {
   if (loading) return <p>Loading...</p>;
 
   /* -----------------------------------------------
-        MAIN RENDER
+        MAIN UI
   ------------------------------------------------ */
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -187,7 +184,7 @@ export default function ReceptionistDashboard() {
 }
 
 /* -----------------------------------------------
-      CSS STYLES
+      STYLES
 ------------------------------------------------ */
 
 const sidebarStyle = {
