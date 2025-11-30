@@ -146,18 +146,42 @@ const getAvailableSlots = async (req, res) => {
 /* ======================================================
    5. GET USER APPOINTMENTS
 ====================================================== */
+/* ======================================================
+   5. GET USER APPOINTMENTS  (FIXED FOR CATEGORY DISPLAY)
+====================================================== */
 const getUserAppointments = async (req, res) => {
   try {
     const user = await User.findById(req.params.userId)
       .populate("appointments.doctor", "name email profilePic")
-      .populate("appointments.category", "name")
-      .populate("appointments.nurse", "name");
+      .populate("appointments.nurse", "name email profilePic");
 
-    return res.status(200).json(user.appointments);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // fetch hospital categories to map categoryId → categoryObject
+    const hospital = await Hospital.findById(user.selectedHospital).select("categories");
+
+    const finalAppointments = user.appointments.map((appt) => {
+      let categoryObj = null;
+
+      if (hospital?.categories) {
+        categoryObj = hospital.categories.find(
+          (c) => String(c._id) === String(appt.category)
+        );
+      }
+
+      const obj = appt.toObject();
+      obj.category = categoryObj || { name: "Unknown Category" };
+
+      return obj;
+    });
+
+    return res.status(200).json(finalAppointments);
   } catch (err) {
+    console.error("getUserAppointments ERROR:", err);
     return res.status(500).json({ message: err.message });
   }
 };
+
 
 /* ======================================================
    6. DELETE APPOINTMENT
@@ -206,15 +230,39 @@ const deleteAppointment = async (req, res) => {
 
 /* ======================================================
    7. GET DOCTOR APPOINTMENTS
+   - improved: attach full category object (from Hospital) so frontend can show category.name
 ====================================================== */
 const getDoctorAppointments = async (req, res) => {
   try {
     const doctor = await User.findById(req.user._id)
       .populate("appointments.user", "name email profilePic")
-      .populate("appointments.category", "name")
       .populate("appointments.nurse", "name email profilePic");
 
-    return res.status(200).json(doctor.appointments);
+    // If doctor has a selectedHospital, fetch that hospital's categories to map category id -> object
+    let hospital = null;
+    if (doctor && doctor.selectedHospital) {
+      hospital = await Hospital.findById(doctor.selectedHospital).select("categories");
+    }
+
+    const modifiedAppointments = (doctor.appointments || []).map((appt) => {
+      let categoryObj = null;
+      try {
+        if (hospital && Array.isArray(hospital.categories)) {
+          categoryObj =
+            hospital.categories.find((c) => String(c._id) === String(appt.category)) || null;
+        }
+      } catch (e) {
+        categoryObj = null;
+      }
+
+      // ensure plain object
+      const apptObj = appt && appt.toObject ? appt.toObject() : { ...appt };
+      apptObj.category = categoryObj;
+
+      return apptObj;
+    });
+
+    return res.status(200).json(modifiedAppointments);
   } catch (err) {
     console.error("getDoctorAppointments ERROR:", err);
     return res.status(500).json({ message: err.message });
@@ -246,7 +294,8 @@ const updateAppointmentStatus = async (req, res) => {
       "appointments._id": appointmentId,
     });
 
-    const userOwner = await User.findOne({
+    // allow re-assignment below, so use let
+    let userOwner = await User.findOne({
       "appointments._id": appointmentId,
       role: { $in: ["user", "patient", "user"] }, // just match any user document that holds the appt
     });
@@ -272,9 +321,12 @@ const updateAppointmentStatus = async (req, res) => {
     /* ---------- ACTION HANDLING ---------- */
 
     // If action requires doctor to exist, validate
-    if (["accept", "assign_nurse", "reject", "complete", "add_prescription"].includes(action) &&
-        action !== "nurse_complete" &&
-        !doctor
+    if (
+      ["accept", "assign_nurse", "reject", "complete", "add_prescription"].includes(
+        action
+      ) &&
+      action !== "nurse_complete" &&
+      !doctor
     ) {
       return res.status(400).json({ message: "Doctor appointment owner not found" });
     }
