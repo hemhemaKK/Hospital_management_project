@@ -13,44 +13,17 @@ export default function DoctorDashboard() {
   const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-
   const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // NEW (for nurses)
   const [nurses, setNurses] = useState([]);
-
-  // UI states
   const [expandedAppts, setExpandedAppts] = useState({});
   const [presInputs, setPresInputs] = useState({});
+  const [assignNurseId, setAssignNurseId] = useState({});
   const [actionLoading, setActionLoading] = useState({});
-  const [assignNurseId, setAssignNurseId] = useState({}); // appointment → nurse id
+  const [loading, setLoading] = useState(true);
 
   const authHeaders = () => ({ headers: { Authorization: `Bearer ${token}` } });
 
-  // AUTO REFRESH
-  useEffect(() => {
-    if (!token) return;
-
-    let mounted = true;
-    const fetchAppts = async () => {
-      try {
-        const res = await axios.get(`${BASE_URL}/appointment/appointments`, authHeaders());
-        if (mounted) setAppointments(res.data);
-      } catch (err) {
-        console.error("Auto refresh error", err);
-      }
-    };
-
-    fetchAppts();
-    const interval = setInterval(fetchAppts, 2000);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, [token]);
-
-  // LOAD INITIAL DATA
+  // Load doctor data
   useEffect(() => {
     if (!token) return;
 
@@ -60,7 +33,7 @@ export default function DoctorDashboard() {
           axios.get(`${BASE_URL}/doctor/dashboard`, authHeaders()),
           axios.get(`${BASE_URL}/doctor/categories`, authHeaders()),
           axios.get(`${BASE_URL}/appointment/appointments`, authHeaders()),
-          axios.get(`${BASE_URL}/doctor/nurse`, authHeaders()).catch(() => ({ data: [] }))
+          axios.get(`${BASE_URL}/doctor/nurse`, authHeaders()).catch(() => ({ data: [] })),
         ]);
 
         setUser(resUser.data.user);
@@ -76,7 +49,7 @@ export default function DoctorDashboard() {
 
         setLoading(false);
       } catch (err) {
-        console.error("Error loading dashboard:", err);
+        console.error(err);
         alert("Error loading dashboard");
       }
     };
@@ -104,9 +77,6 @@ export default function DoctorDashboard() {
 
   const toggleExpand = (id) => {
     setExpandedAppts((s) => ({ ...s, [id]: !s[id] }));
-    if (!presInputs[id]) {
-      setPresInputs((p) => ({ ...p, [id]: { medicineName: "", dosage: "", duration: "", notes: "" } }));
-    }
   };
 
   const handlePresChange = (apptId, field, value) => {
@@ -120,18 +90,17 @@ export default function DoctorDashboard() {
       const refreshed = await axios.get(`${BASE_URL}/appointment/appointments`, authHeaders());
       setAppointments(refreshed.data || []);
     } catch (err) {
-      console.error("Failed to update appointment", err);
+      console.error(err);
       alert("Failed to update appointment");
     } finally {
       setActionLoading((s) => ({ ...s, [id]: false }));
     }
   };
 
-  // Add Prescription
   const addPrescription = async (apptId) => {
     const inputs = presInputs[apptId] || {};
     if (!inputs.medicineName?.trim() || !inputs.dosage?.trim() || !inputs.duration?.trim()) {
-      return alert("Please enter medicine name, dosage, duration");
+      return alert("Enter medicine, dosage, and duration");
     }
 
     const prescription = {
@@ -143,36 +112,20 @@ export default function DoctorDashboard() {
 
     await updateAppointment(apptId, { action: "add_prescription", prescription });
 
-    setPresInputs((p) => ({
-      ...p,
-      [apptId]: { medicineName: "", dosage: "", duration: "", notes: "" },
-    }));
+    setPresInputs((p) => ({ ...p, [apptId]: { medicineName: "", dosage: "", duration: "", notes: "" } }));
   };
 
-  // Assign Nurse (Option B — AFTER prescription)
   const assignNurse = async (apptId) => {
     const nurseId = assignNurseId[apptId];
-    if (!nurseId) return alert("Select nurse");
-
+    if (!nurseId) return alert("Select a nurse");
     await updateAppointment(apptId, { action: "assign_nurse", nurseId });
-    alert("Nurse assigned");
+    alert("Nurse assigned with prescriptions");
   };
 
   const directComplete = async (appt) => {
     await updateAppointment(appt._id, { action: "complete" });
   };
 
-  const acceptAppointment = async (id) => {
-    await updateAppointment(id, { action: "accept" });
-  };
-
-  const rejectAppointment = async (id) => {
-    const ok = window.confirm("Are you sure?");
-    if (!ok) return;
-    await updateAppointment(id, { action: "reject" });
-  };
-
-  // Appointment Table with Nurse Assign UI
   const renderAppointmentTable = () => (
     <div>
       <table style={tableStyle}>
@@ -186,7 +139,6 @@ export default function DoctorDashboard() {
             <th style={thStyle}>Action</th>
           </tr>
         </thead>
-
         <tbody>
           {appointments.length > 0 ? (
             appointments.map((a, i) => {
@@ -198,55 +150,22 @@ export default function DoctorDashboard() {
                 <React.Fragment key={a._id}>
                   <tr style={trStyle(i)}>
                     <td style={tdStyle}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ cursor: "pointer" }} onClick={() => toggleExpand(a._id)}>
-                          {expanded ? "▾" : "▸"}
-                        </div>
-                        <div>{a.user?.name}</div>
+                      <div style={{ cursor: "pointer" }} onClick={() => toggleExpand(a._id)}>
+                        {expanded ? "▾ " : "▸ "}
+                        {a.user?.name}
                       </div>
                     </td>
-
                     <td style={tdStyle}>{a.date}</td>
                     <td style={tdStyle}>{a.time}</td>
-
-                    <td style={tdStyle}>{a.nurse ? <b>{a.nurse.name}</b> : <i>Not Assigned</i>}</td>
-
+                    <td style={tdStyle}>{a.nurse ? a.nurse.name : <i>Not Assigned</i>}</td>
                     <td style={tdStyle}>
-                      <span style={{
-                        padding: "5px 10px",
-                        borderRadius: 6,
-                        color: "#fff",
-                        fontWeight: "bold",
-                        background:
-                          a.status === "PENDING" ? "gray" :
-                          a.status === "DOCTOR_ACCEPTED" ? "green" :
-                          a.status === "NURSE_ASSIGNED" ? "blue" :
-                          a.status === "NURSE_COMPLETED" ? "orange" :
-                          a.status === "REJECTED" ? "red" :
-                          "#222"
-                      }}>
-                        {a.status}
-                      </span>
+                      <span style={statusBadge(a.status)}>{a.status}</span>
                     </td>
-
                     <td style={tdStyle}>
-                      {a.status === "PENDING" && (
-                        <>
-                          <button style={actionBtnStyle("green")} onClick={() => acceptAppointment(a._id)} disabled={loadingThis}>Accept</button>
-                          <button style={actionBtnStyle("red")} onClick={() => rejectAppointment(a._id)} disabled={loadingThis}>Reject</button>
-                        </>
-                      )}
-
-                      {a.status !== "PENDING" &&
-                        a.status !== "REJECTED" &&
-                        a.status !== "DOCTOR_COMPLETED" && (
-                          <button style={actionBtnStyle("green")} onClick={() => directComplete(a)} disabled={loadingThis}>
-                            Complete
-                          </button>
-                        )}
-
-                      {a.status === "DOCTOR_COMPLETED" && (
-                        <span style={{ color: "green", fontWeight: "bold" }}>✔ Completed</span>
+                      {a.status !== "REJECTED" && a.status !== "DOCTOR_COMPLETED" && (
+                        <button style={actionBtnStyle("green")} onClick={() => directComplete(a)} disabled={loadingThis}>
+                          Complete
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -254,98 +173,92 @@ export default function DoctorDashboard() {
                   {expanded && (
                     <tr>
                       <td colSpan={6} style={{ padding: 12, background: "#fbfbfb" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                          
-                          {/* Description */}
-                          <div>
-                            <strong>Description:</strong>
-                            <p>{a.description || "-"}</p>
-                          </div>
+                        {/* Description */}
+                        <div>
+                          <strong>Description:</strong>
+                          <p>{a.description || "-"}</p>
+                        </div>
 
-                          {/* Prescription list */}
-                          <div>
-                            <strong>Prescriptions</strong>
-                            {prescriptions.length === 0 ? (
-                              <p style={{ color: "#777" }}>No prescriptions yet.</p>
-                            ) : (
-                              prescriptions.map((p, idx) => (
-                                <div key={idx} style={{ padding: 8, background: "#fff", borderRadius: 6, border: "1px solid #ddd", marginTop: 6 }}>
-                                  <b>{p.medicineName}</b> — {p.dosage}
-                                  <div>{p.duration}</div>
-                                  <div style={{ fontSize: 12, color: "#555" }}>
-                                    {p.prescribedBy === user?._id ? "Prescribed by you" : "By nurse"}
-                                  </div>
+                        {/* Prescriptions */}
+                        <div>
+                          <strong>Prescriptions</strong>
+                          {prescriptions.length === 0 ? (
+                            <p style={{ color: "#777" }}>No prescriptions yet.</p>
+                          ) : (
+                            prescriptions.map((p, idx) => (
+                              <div key={idx} style={{ padding: 8, border: "1px solid #ddd", borderRadius: 6, marginTop: 6 }}>
+                                <b>{p.medicineName}</b> — {p.dosage} ({p.duration})
+                                <div style={{ fontSize: 12, color: "#555" }}>
+                                  Prescribed by: {p.prescribedBy}
                                 </div>
-                              ))
-                            )}
-                          </div>
-
-                          {/* Add Prescription */}
-                          {a.status !== "DOCTOR_COMPLETED" && (
-                            <div>
-                              <strong>Add Prescription</strong>
-
-                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
-                                <input placeholder="Medicine" style={inputStyle}
-                                  value={presInputs[a._id]?.medicineName || ""}
-                                  onChange={(e) => handlePresChange(a._id, "medicineName", e.target.value)}
-                                />
-
-                                <input placeholder="Dosage" style={inputStyle}
-                                  value={presInputs[a._id]?.dosage || ""}
-                                  onChange={(e) => handlePresChange(a._id, "dosage", e.target.value)}
-                                />
-
-                                <input placeholder="Duration" style={inputStyle}
-                                  value={presInputs[a._id]?.duration || ""}
-                                  onChange={(e) => handlePresChange(a._id, "duration", e.target.value)}
-                                />
-
-                                <textarea placeholder="Notes" style={{ ...inputStyle, height: 60 }}
-                                  value={presInputs[a._id]?.notes || ""}
-                                  onChange={(e) => handlePresChange(a._id, "notes", e.target.value)}
-                                />
+                                {p.notes && <div>Notes: {p.notes}</div>}
                               </div>
+                            ))
+                          )}
+                        </div>
 
-                              <button style={actionBtnStyle("orange")} onClick={() => addPrescription(a._id)}>
-                                Add Prescription
+                        {/* Add prescription */}
+                        {a.status !== "DOCTOR_COMPLETED" && (
+                          <div style={{ marginTop: 12 }}>
+                            <strong>Add Prescription</strong>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+                              <input
+                                placeholder="Medicine"
+                                style={inputStyle}
+                                value={presInputs[a._id]?.medicineName || ""}
+                                onChange={(e) => handlePresChange(a._id, "medicineName", e.target.value)}
+                              />
+                              <input
+                                placeholder="Dosage"
+                                style={inputStyle}
+                                value={presInputs[a._id]?.dosage || ""}
+                                onChange={(e) => handlePresChange(a._id, "dosage", e.target.value)}
+                              />
+                              <input
+                                placeholder="Duration"
+                                style={inputStyle}
+                                value={presInputs[a._id]?.duration || ""}
+                                onChange={(e) => handlePresChange(a._id, "duration", e.target.value)}
+                              />
+                              <textarea
+                                placeholder="Notes"
+                                style={{ ...inputStyle, height: 60 }}
+                                value={presInputs[a._id]?.notes || ""}
+                                onChange={(e) => handlePresChange(a._id, "notes", e.target.value)}
+                              />
+                            </div>
+                            <button style={actionBtnStyle("orange")} onClick={() => addPrescription(a._id)}>
+                              Add Prescription
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Assign Nurse */}
+                        {a.prescription?.length > 0 && !a.nurse && (
+                          <div style={{ marginTop: 20 }}>
+                            <strong>Assign Nurse</strong>
+                            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                              <select
+                                style={inputStyle}
+                                value={assignNurseId[a._id] || ""}
+                                onChange={(e) => setAssignNurseId((p) => ({ ...p, [a._id]: e.target.value }))}
+                              >
+                                <option value="">Select Nurse</option>
+                                {nurses.map((n) => (
+                                  <option key={n._id} value={n._id}>
+                                    {n.name}
+                                  </option>
+                                ))}
+                              </select>
+                              <button style={actionBtnStyle("green")} onClick={() => assignNurse(a._id)}>
+                                Assign Nurse
                               </button>
                             </div>
-                          )}
-
-                          {/* Assign Nurse AFTER prescription */}
-                          {a.prescription?.length > 0 && !a.nurse && (
-                            <div style={{ marginTop: 20 }}>
-                              <strong>Assign Nurse</strong>
-
-                              <div style={{ marginTop: 8, display: "flex", gap: 10 }}>
-                                <select
-                                  style={inputStyle}
-                                  value={assignNurseId[a._id] || ""}
-                                  onChange={(e) =>
-                                    setAssignNurseId((p) => ({ ...p, [a._id]: e.target.value }))
-                                  }
-                                >
-                                  <option value="">Select Nurse</option>
-                                  {nurses.map((n) => (
-                                    <option key={n._id} value={n._id}>
-                                      {n.name}
-                                    </option>
-                                  ))}
-                                </select>
-
-                                <button style={actionBtnStyle("green")} onClick={() => assignNurse(a._id)}>
-                                  Assign Nurse
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                        </div>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )}
-
                 </React.Fragment>
               );
             })
@@ -368,18 +281,19 @@ export default function DoctorDashboard() {
           <select style={selectStyle} value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)}>
             <option value="">Select Department</option>
             {categories.map((c) => (
-              <option key={c._id} value={c._id}>{c.name}</option>
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
             ))}
           </select>
-          <button onClick={chooseCategory} style={chooseBtnStyle}>Submit</button>
+          <button onClick={chooseCategory} style={chooseBtnStyle}>
+            Submit
+          </button>
         </div>
       ) : !user?.isVerified ? (
         <p style={{ color: "orange" }}>Waiting for admin approval...</p>
       ) : (
-        <>
-          <h3>Appointments</h3>
-          {renderAppointmentTable()}
-        </>
+        <>{renderAppointmentTable()}</>
       )}
     </div>
   );
@@ -396,16 +310,16 @@ export default function DoctorDashboard() {
             <h3 style={{ color: "#fff" }}>{user?.name}</h3>
             <p style={{ color: "#aaa" }}>{user?.email}</p>
           </div>
-
           {["Dashboard", "Appointments", "Profile"].map((menu) => (
             <div key={menu} style={menuItemStyle(activeSection === menu)} onClick={() => setActiveSection(menu)}>
               {menu}
             </div>
           ))}
         </div>
-
         <div style={{ padding: "0.5rem" }}>
-          <div style={bottomLinkStyle(false, true)} onClick={handleLogout}>Logout</div>
+          <div style={bottomLinkStyle(false, true)} onClick={handleLogout}>
+            Logout
+          </div>
         </div>
       </div>
 
@@ -419,107 +333,18 @@ export default function DoctorDashboard() {
   );
 }
 
-/* --- CSS --- */
-
-const sidebarStyle = {
-  width: "250px",
-  background: "#111",
-  height: "100vh",
-  position: "fixed",
-  padding: "1rem",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-};
-
-const profileStyle = {
-  textAlign: "center",
-  paddingBottom: "10px",
-  borderBottom: "1px solid #444",
-};
-
-const profilePicStyle = {
-  width: "80px",
-  height: "80px",
-  borderRadius: "50%",
-  objectFit: "cover",
-};
-
-const menuItemStyle = (active) => ({
-  padding: "10px",
-  margin: "8px 0",
-  borderRadius: "6px",
-  background: active ? "#333" : "transparent",
-  color: active ? "#4CAF50" : "#fff",
-  cursor: "pointer",
-});
-
-const bottomLinkStyle = (active, isLogout = false) => ({
-  padding: "10px",
-  borderRadius: "8px",
-  textAlign: "center",
-  background: isLogout ? "#ff4d4d" : active ? "#222" : "transparent",
-  color: "#fff",
-  cursor: "pointer",
-});
-
-const selectStyle = {
-  padding: "8px",
-  marginRight: "10px",
-  borderRadius: "6px",
-};
-
-const chooseBtnStyle = {
-  padding: "8px 16px",
-  background: "#4CAF50",
-  border: "none",
-  color: "white",
-  borderRadius: "6px",
-  cursor: "pointer",
-};
-
-const tableStyle = {
-  width: "100%",
-  marginTop: "20px",
-  background: "#fff",
-  borderRadius: "10px",
-  borderCollapse: "collapse",
-};
-
-const thStyle = {
-  background: "#000",
-  color: "#fff",
-  padding: "12px",
-  textAlign: "left",
-};
-
-const tdStyle = {
-  padding: "12px",
-  verticalAlign: "top",
-  borderBottom: "1px solid #eee",
-};
-
-const trStyle = (i) => ({
-  background: i % 2 === 0 ? "#f9f9f9" : "#fff",
-});
-
-const actionBtnStyle = (color) => ({
-  padding: "6px 10px",
-  border: "none",
-  borderRadius: "6px",
-  margin: "2px",
-  color: "#fff",
-  cursor: "pointer",
-  background:
-    color === "green" ? "#4CAF50" :
-    color === "orange" ? "#FF9800" :
-    color === "red" ? "#f44336" :
-    "#777",
-});
-
-const inputStyle = {
-  padding: 8,
-  borderRadius: 6,
-  border: "1px solid #ddd",
-  minWidth: 180,
-};
+/* --- CSS & Helpers --- */
+const sidebarStyle = { width: 250, background: "#111", height: "100vh", padding: "1rem", position: "fixed", display: "flex", flexDirection: "column", justifyContent: "space-between" };
+const profileStyle = { textAlign: "center", paddingBottom: 10, borderBottom: "1px solid #444" };
+const profilePicStyle = { width: 80, height: 80, borderRadius: "50%", objectFit: "cover" };
+const menuItemStyle = (active) => ({ padding: 10, margin: "8px 0", borderRadius: 6, background: active ? "#333" : "transparent", color: active ? "#4CAF50" : "#fff", cursor: "pointer" });
+const bottomLinkStyle = (active, isLogout = false) => ({ padding: 10, borderRadius: 8, textAlign: "center", background: isLogout ? "#ff4d4d" : active ? "#222" : "transparent", color: "#fff", cursor: "pointer" });
+const selectStyle = { padding: 8, marginRight: 10, borderRadius: 6 };
+const chooseBtnStyle = { padding: "8px 16px", background: "#4CAF50", border: "none", color: "white", borderRadius: 6, cursor: "pointer" };
+const tableStyle = { width: "100%", marginTop: 20, background: "#fff", borderRadius: 10, borderCollapse: "collapse" };
+const thStyle = { background: "#000", color: "#fff", padding: 12, textAlign: "left" };
+const tdStyle = { padding: 12, verticalAlign: "top", borderBottom: "1px solid #eee" };
+const trStyle = (i) => ({ background: i % 2 === 0 ? "#f9f9f9" : "#fff" });
+const statusBadge = (status) => ({ padding: "5px 10px", borderRadius: 6, color: "#fff", fontWeight: "bold", background: status === "PENDING" ? "gray" : status === "DOCTOR_ACCEPTED" ? "green" : status === "NURSE_ASSIGNED" ? "blue" : status === "NURSE_COMPLETED" ? "orange" : status === "REJECTED" ? "red" : "#222" });
+const actionBtnStyle = (color) => ({ padding: "6px 10px", border: "none", borderRadius: 6, margin: 2, color: "#fff", cursor: "pointer", background: color === "green" ? "#4CAF50" : color === "orange" ? "#FF9800" : color === "red" ? "#f44336" : "#777" });
+const inputStyle = { padding: 8, borderRadius: 6, border: "1px solid #ddd", minWidth: 180 };

@@ -70,6 +70,7 @@ export default function Appointment() {
         const res = await axios.get(`${BASE_URL}/api/appointment/doctors/${categoryId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        console.log("does this fetch doctor working")
         setDoctors(res.data || []);
         setDoctorId(""); // reset selected doctor when category changes
       } catch (err) {
@@ -91,12 +92,9 @@ export default function Appointment() {
 
     const fetchSlots = async () => {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/api/appointment/slots/${doctorId}/${date}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        // API returns availableSlots (array of strings). Keep it simple.
+        const res = await axios.get(`${BASE_URL}/api/appointment/slots/${doctorId}/${date}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setAvailableSlots(res.data?.availableSlots || []);
         setSelectedSlot("");
       } catch (err) {
@@ -116,7 +114,6 @@ export default function Appointment() {
       const res = await axios.get(`${BASE_URL}/api/appointment/user/${uid}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // backend populates doctor/category/nurse — set that list
       setAppointments(res.data || []);
     } catch (err) {
       console.error("Error loading appointments:", err);
@@ -155,11 +152,12 @@ export default function Appointment() {
 
       alert(res.data?.message || "Appointment booked");
 
-      // DON'T insert the raw appointment returned (it may be unpopulated).
-      // Instead re-fetch user's appointments (populated) so front-end shows correct fields.
-      await loadAppointments(user._id);
+      if (res.data?.appointment) {
+        setAppointments((prev) => [res.data.appointment, ...prev]);
+      } else {
+        loadAppointments(user._id);
+      }
 
-      // reset form
       setCategoryId("");
       setDoctors([]);
       setDoctorId("");
@@ -182,9 +180,7 @@ export default function Appointment() {
       await axios.delete(`${BASE_URL}/api/appointment/${user._id}/${appointmentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      // update local list (server-side also removed doctor/nurse copies)
-      setAppointments((prev) => prev.filter((a) => String(a._id) !== String(appointmentId)));
+      setAppointments((prev) => prev.filter((a) => a._id !== appointmentId));
       alert("Appointment cancelled");
     } catch (err) {
       console.error("Cancel failed:", err);
@@ -306,7 +302,7 @@ export default function Appointment() {
                   <td style={tdStyle}>{a.category?.name || "-"}</td>
                   <td style={tdStyle}>{a.date}</td>
                   <td style={tdStyle}>{a.time}</td>
-                  <td style={tdStyle}>{a.status}{a.nurse ? ` — Nurse: ${a.nurse?.name || a.nurse}` : ""}</td>
+                  <td style={tdStyle}>{a.status}</td>
                   <td style={tdStyle}>
                     <button onClick={() => handleCancel(a._id)} style={{ padding: "6px 8px", borderRadius: 6, border: "none", background: "#e74c3c", color: "#fff", cursor: "pointer" }}>
                       Cancel

@@ -19,7 +19,7 @@ export default function NurseDashboard() {
   const [loading, setLoading] = useState(true);
 
   const [appointments, setAppointments] = useState([]);
-  const [prescriptionText, setPrescriptionText] = useState("");
+  const [prescriptionText, setPrescriptionText] = useState({}); // keyed by appointmentId
 
   /* --------------------------------------------------------
      LOAD NURSE + CATEGORIES + NURSE APPOINTMENTS
@@ -33,7 +33,6 @@ export default function NurseDashboard() {
         const resUser = await axios.get(`${BASE_URL}/nurse/dashboard`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
         const nurse = resUser.data.user;
         setUser(nurse);
 
@@ -128,21 +127,27 @@ export default function NurseDashboard() {
      ADD PRESCRIPTION
   -------------------------------------------------------- */
   const addPrescription = async (appointmentId) => {
-    if (!prescriptionText.trim())
+    const text = prescriptionText[appointmentId];
+    if (!text || !text.trim())
       return alert("Enter prescription before submitting");
 
     try {
       await axios.put(
-        `${BASE_URL}/appointments/appointment/${appointmentId}`,
+        `${BASE_URL}/appointment/appointment/${appointmentId}`,
         {
           action: "add_prescription",
-          prescription: prescriptionText,
+          prescription: {
+            medicineName: text,
+            dosage: "N/A",
+            duration: "N/A",
+            notes: "",
+          },
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       alert("Prescription added");
-      setPrescriptionText("");
+      setPrescriptionText((prev) => ({ ...prev, [appointmentId]: "" }));
       refreshAppointments();
     } catch (err) {
       console.error(err);
@@ -195,8 +200,7 @@ export default function NurseDashboard() {
           <b>Email:</b> {assignedDoctor?.email}
         </p>
         <p>
-          <b>Phone:</b> {assignedDoctor?.phone || "-"}
-        </p>
+          <b>Phone:</b> {assignedDoctor?.phone || "-"}</p>
       </div>
     ) : (
       <p>No doctor assigned yet.</p>
@@ -224,7 +228,6 @@ export default function NurseDashboard() {
             }}
           >
             <h3>{appt.user?.name}</h3>
-
             <p>
               <b>Date:</b> {appt.date}
             </p>
@@ -254,6 +257,21 @@ export default function NurseDashboard() {
               </span>
             </p>
 
+            {/* EXISTING PRESCRIPTIONS */}
+            <div style={{ marginTop: "10px" }}>
+              <h4>Prescriptions:</h4>
+              {appt.prescription?.length === 0 ? (
+                <p>No prescriptions yet.</p>
+              ) : (
+                appt.prescription.map((p, i) => (
+                  <div key={i} style={{ marginBottom: "6px" }}>
+                    <b>{p.prescribedBy === appt.doctor?._id ? "Doctor" : "Nurse"}:</b>{" "}
+                    {p.medicineName} | {p.dosage} | {p.duration} | {p.notes}
+                  </div>
+                ))
+              )}
+            </div>
+
             {/* DISABLE AFTER COMPLETE */}
             <button
               style={{
@@ -276,8 +294,13 @@ export default function NurseDashboard() {
             <textarea
               placeholder="Add Prescription..."
               style={textAreaStyle}
-              value={prescriptionText}
-              onChange={(e) => setPrescriptionText(e.target.value)}
+              value={prescriptionText[appt._id] || ""}
+              onChange={(e) =>
+                setPrescriptionText((prev) => ({
+                  ...prev,
+                  [appt._id]: e.target.value,
+                }))
+              }
             />
 
             <button
