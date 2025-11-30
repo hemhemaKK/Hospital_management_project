@@ -1,20 +1,29 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode"; // ✅ Correct import
 
 const BASE_URL = "http://localhost:5000";
 
-export default function AppointmentStatus({ userId }) {
+export default function AppointmentStatus() {
   const token = localStorage.getItem("token");
-
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  let userId;
+  try {
+    if (token) {
+      const decoded = jwtDecode(token); // decode token
+      userId = decoded.id || decoded._id; // adjust depending on your token payload
+    }
+  } catch (err) {
+    console.error("Token decode error:", err);
+  }
 
   /* ---------------------- Load Appointments ---------------------- */
   const loadAppointments = async () => {
     if (!token || !userId) return;
 
     setLoading(true);
-
     try {
       const res = await axios.get(
         `${BASE_URL}/api/appointment/user/${userId}`,
@@ -22,8 +31,6 @@ export default function AppointmentStatus({ userId }) {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-
-      // Backend returns: user.appointments (array)
       setAppointments(res.data || []);
     } catch (err) {
       console.error("Error loading appointments:", err);
