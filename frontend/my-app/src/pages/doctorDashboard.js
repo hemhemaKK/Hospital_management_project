@@ -20,28 +20,27 @@ export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true);
 
   /* ------------------------------------------------------
-     LOAD DOCTOR DATA + CATEGORY + NURSES + APPOINTMENTS
+     LOAD ALL REQUIRED DOCTOR DATA
   ------------------------------------------------------ */
   useEffect(() => {
     if (!token) return;
 
     const loadData = async () => {
       try {
-        // Fetch doctor info
+        // 1️⃣ Load doctor profile
         const resUser = await axios.get(`${BASE_URL}/doctor/dashboard`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
         const doctor = resUser.data.user;
         setUser(doctor);
 
-        // Fetch departments(category)
+        // 2️⃣ Load doctor hospital categories
         const resCat = await axios.get(`${BASE_URL}/doctor/categories`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCategories(resCat.data);
 
-        // Fetch nurse list if doctor approved
+        // 3️⃣ Load nurses (only if approved)
         if (doctor.isVerified && doctor.selectedCategory) {
           const resNurse = await axios.get(`${BASE_URL}/doctor/nurse`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -49,7 +48,7 @@ export default function DoctorDashboard() {
           setNurses(resNurse.data);
         }
 
-        // Fetch appointments
+        // 4️⃣ Load appointments
         const resAppt = await axios.get(`${BASE_URL}/appointment/appointments`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -74,10 +73,11 @@ export default function DoctorDashboard() {
   };
 
   /* ------------------------------------------------------
-     SELECT CATEGORY
+     DOCTOR SELECT CATEGORY
   ------------------------------------------------------ */
   const chooseCategory = async () => {
-    if (!selectedCategoryId) return alert("Please select a department");
+    if (!selectedCategoryId)
+      return alert("Please select a department");
 
     try {
       await axios.put(
@@ -88,6 +88,7 @@ export default function DoctorDashboard() {
 
       alert("Category selected. Wait for admin approval.");
 
+      // refresh doctor data
       const resUser = await axios.get(`${BASE_URL}/doctor/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -122,6 +123,7 @@ export default function DoctorDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // refresh nurse list
       const updated = await axios.get(`${BASE_URL}/doctor/nurse`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -146,6 +148,7 @@ export default function DoctorDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      // refresh appointment list
       const refreshed = await axios.get(`${BASE_URL}/appointment/appointments`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -160,7 +163,7 @@ export default function DoctorDashboard() {
   };
 
   /* ------------------------------------------------------
-     UI: CATEGORY SELECTION
+     UI: CATEGORY SELECTION DROPDOWN
   ------------------------------------------------------ */
   const renderCategorySelection = () => (
     <div style={{ marginTop: "20px" }}>
@@ -262,7 +265,7 @@ export default function DoctorDashboard() {
       </thead>
 
       <tbody>
-        {appointments && appointments.length > 0 ? (
+        {appointments.length > 0 ? (
           appointments.map((a, i) => (
             <tr key={a._id} style={trStyle(i)}>
               <td style={tdStyle}>{a.user?.name || "-"}</td>
@@ -270,6 +273,7 @@ export default function DoctorDashboard() {
               <td style={tdStyle}>{a.time}</td>
               <td style={tdStyle}>{a.description || "-"}</td>
               <td style={tdStyle}>{a.status}</td>
+
               <td style={tdStyle}>
                 {a.status === "PENDING" ? (
                   <>
@@ -301,17 +305,16 @@ export default function DoctorDashboard() {
         ) : (
           <tr>
             <td style={tdStyle} colSpan={6} align="center">
-              No appointments
+              No Appointments
             </td>
           </tr>
         )}
       </tbody>
-
     </table>
   );
 
   /* ------------------------------------------------------
-     DASHBOARD VIEW
+     MAIN DASHBOARD CONTENT
   ------------------------------------------------------ */
   const renderDashboard = () => (
     <div>
@@ -319,7 +322,7 @@ export default function DoctorDashboard() {
         renderCategorySelection()
       ) : !user.isVerified ? (
         <p style={{ color: "orange", marginTop: "20px" }}>
-          Waiting for admin approval…
+          Waiting for admin approval...
         </p>
       ) : (
         <>
@@ -330,7 +333,7 @@ export default function DoctorDashboard() {
     </div>
   );
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) return <p>Loading...</p>;
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -365,7 +368,7 @@ export default function DoctorDashboard() {
         </div>
       </div>
 
-      {/* CONTENT */}
+      {/* Main Content */}
       <div style={{ flex: 1, marginLeft: "250px", padding: "2rem" }}>
         {activeSection === "Dashboard" && renderDashboard()}
         {activeSection === "Nurses" && renderNurseTable()}
@@ -465,10 +468,10 @@ const actionBtnStyle = (color) => ({
     color === "green"
       ? "#4CAF50"
       : color === "orange"
-        ? "#FF9800"
-        : color === "red"
-          ? "#f44336"
-          : "#777",
+      ? "#FF9800"
+      : color === "red"
+      ? "#f44336"
+      : "#777",
   border: "none",
   color: "#fff",
 });

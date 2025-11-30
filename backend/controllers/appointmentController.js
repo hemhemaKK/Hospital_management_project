@@ -2,7 +2,7 @@ const User = require("../models/User");
 const Hospital = require("../models/Hospital");
 
 /* -------------------------------------------
-   1. GET ALL CATEGORIES (TENANT FILTERED)
+   1. GET ALL CATEGORIES FOR USER
 -------------------------------------------- */
 const getCategories = async (req, res) => {
   try {
@@ -21,24 +21,22 @@ const getCategories = async (req, res) => {
   }
 };
 
-
-
 /* -------------------------------------------
    2. GET DOCTORS BY CATEGORY
 -------------------------------------------- */
 const getDoctorsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const tenantId = req.user.selectedHospitalTenantId;  // 🔥 important
+    const tenantId = req.user.selectedHospitalTenantId;
 
     const doctors = await User.find({
       role: "doctor",
       selectedCategory: categoryId,
-      selectedHospitalTenantId: tenantId,   // 🔥 required
+      selectedHospitalTenantId: tenantId,
       isVerified: true,
       status: "ACTIVE"
-    })
-    .select("name email profilePic selectedCategory");
+    }).select("name email profilePic selectedCategory");
+
     res.status(200).json(doctors);
   } catch (err) {
     console.error("getDoctorsByCategory error:", err);
@@ -46,9 +44,8 @@ const getDoctorsByCategory = async (req, res) => {
   }
 };
 
-
 /* -------------------------------------------
-   3. CREATE APPOINTMENT
+   3. CREATE APPOINTMENT (SAVE TO BOTH)
 -------------------------------------------- */
 const createAppointment = async (req, res) => {
   try {
@@ -60,7 +57,8 @@ const createAppointment = async (req, res) => {
     const user = await User.findById(userId);
     const doctor = await User.findById(doctorId);
 
-    if (!user || !doctor) return res.status(404).json({ message: "User or doctor not found" });
+    if (!user || !doctor)
+      return res.status(404).json({ message: "User or doctor not found" });
 
     const appointment = {
       user: userId,
@@ -70,14 +68,23 @@ const createAppointment = async (req, res) => {
       date,
       time,
       description,
-      status: "PENDING"
+      status: "PENDING",
     };
 
+    // ⭐ Save in USER and DOCTOR
     user.appointments.unshift(appointment);
-    await user.save();
+    doctor.appointments.unshift(appointment);
 
-    res.status(200).json({ message: "Appointment Booked", appointment });
+    await user.save();
+    await doctor.save();
+
+    res.status(200).json({
+      message: "Appointment booked successfully",
+      appointment,
+    });
+
   } catch (err) {
+    console.error("CREATE APPT ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -89,16 +96,13 @@ const getAvailableSlots = async (req, res) => {
   try {
     const { doctorId, date } = req.params;
 
-    const users = await User.find({ "appointments.doctor": doctorId });
+    const doctor = await User.findById(doctorId);
 
-    const booked = [];
-    users.forEach(u => {
-      u.appointments.forEach(a => {
-        if (a.date === date && a.doctor.toString() === doctorId) {
-          booked.push(a.time);
-        }
-      });
-    });
+    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
+
+    const booked = doctor.appointments
+      .filter(a => a.date === date)
+      .map(a => a.time);
 
     const slots = [];
     for (let h = 9; h < 17; h++) {
@@ -130,15 +134,23 @@ const getUserAppointments = async (req, res) => {
 };
 
 /* -------------------------------------------
-   6. DELETE APPOINTMENT
+   6. DELETE APPOINTMENT (USER SIDE)
 -------------------------------------------- */
 const deleteAppointment = async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
+    const doctor = await User.findById(user.appointments.find(a => a._id.toString() === req.params.appointmentId)?.doctor);
 
     user.appointments = user.appointments.filter(
       a => a._id.toString() !== req.params.appointmentId
     );
+
+    if (doctor) {
+      doctor.appointments = doctor.appointments.filter(
+        a => a._id.toString() !== req.params.appointmentId
+      );
+      await doctor.save();
+    }
 
     await user.save();
 
@@ -148,77 +160,56 @@ const deleteAppointment = async (req, res) => {
   }
 };
 
-/* ----------------------------------------------------
-   GET ALL APPOINTMENTS FOR LOGGED-IN DOCTOR
------------------------------------------------------ */
+/* -------------------------------------------
+   7. GET LOGGED-IN DOCTOR APPOINTMENTS
+-------------------------------------------- */
 const getDoctorAppointments = async (req, res) => {
   try {
-    const doctorId = req.user._id.toString();
-
-    // Find all users who have an appointment with this doctor
-    const users = await User.find({ "appointments.doctor": doctorId })
+    const doctor = await User.findById(req.user._id)
       .populate("appointments.user", "name email profilePic")
-      .populate("appointments.category", "name")
-      .populate("appointments.doctor", "name email");
+      .populate("appointments.category", "name");
 
-    let allAppointments = [];
-
-    users.forEach(user => {
-      user.appointments.forEach(appt => {
-        if (appt.doctor && appt.doctor.toString() === doctorId) {
-          allAppointments.push({
-            ...appt.toObject(),
-            user: {
-              _id: user._id,
-              name: user.name,
-              email: user.email,
-            }
-          });
-        }
-      });
-    });
-
-    res.status(200).json(allAppointments);
+    return res.status(200).json(doctor.appointments);
   } catch (err) {
     console.error("getDoctorAppointments ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-/* ----------------------------------------------------
-   UPDATE APPOINTMENT STATUS FOR DOCTOR
------------------------------------------------------ */
+/* -------------------------------------------
+   8. UPDATE APPOINTMENT STATUS
+-------------------------------------------- */
 const updateAppointmentStatus = async (req, res) => {
   try {
     const doctorId = req.user._id.toString();
     const appointmentId = req.params.appointmentId;
     const { action } = req.body;
 
-    const users = await User.find({ "appointments._id": appointmentId });
+    const doctor = await User.findById(doctorId);
+    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
 
-    if (!users.length)
-      return res.status(404).json({ message: "Appointment not found" });
+    // Find appointment in doctor array
+    const appt = doctor.appointments.id(appointmentId);
+    if (!appt) return res.status(404).json({ message: "Appointment not found" });
 
-    let updatedAppt = null;
+    // Update status
+    if (action === "accept") appt.status = "DOCTOR_ACCEPTED";
+    if (action === "reject") appt.status = "REJECTED";
+    if (action === "complete") appt.status = "DOCTOR_COMPLETED";
 
-    for (let user of users) {
-      const appt = user.appointments.id(appointmentId);
+    await doctor.save();
 
-      if (!appt) continue;
-      if (appt.doctor.toString() !== doctorId) continue;
-
-      if (action === "accept") appt.status = "DOCTOR_ACCEPTED";
-      if (action === "reject") appt.status = "REJECTED";
-      if (action === "complete") appt.status = "DOCTOR_COMPLETED";
-
-      await user.save();
-      updatedAppt = appt;
-    }
+    // Update same appointment for USER
+    const user = await User.findById(appt.user);
+    const userAppt = user.appointments.id(appointmentId);
+    if (userAppt) userAppt.status = appt.status;
+    await user.save();
 
     res.status(200).json({
       message: "Status updated successfully",
-      appointment: updatedAppt,
+      appointment: appt,
     });
+
   } catch (err) {
     console.error("updateAppointmentStatus ERROR:", err);
     res.status(500).json({ message: err.message });
@@ -233,5 +224,5 @@ module.exports = {
   getUserAppointments,
   deleteAppointment,
   getDoctorAppointments,
-  updateAppointmentStatus
+  updateAppointmentStatus,
 };
