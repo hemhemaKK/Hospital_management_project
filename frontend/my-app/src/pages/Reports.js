@@ -12,10 +12,8 @@ export default function Report() {
   const [appointments, setAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
-
   const [filterType, setFilterType] = useState("all"); // all, today, week, month
 
-  // ---------- Load logged-in user's appointments ----------
   const loadAppointments = async () => {
     if (!token) return;
     setLoading(true);
@@ -41,7 +39,6 @@ export default function Report() {
     loadAppointments();
   }, []);
 
-  // ---------- Filter appointments by date ----------
   useEffect(() => {
     if (filterType === "all") {
       setFilteredAppointments(appointments);
@@ -52,34 +49,27 @@ export default function Report() {
     const filtered = appointments.filter((a) => {
       const appDate = new Date(a.date);
       if (filterType === "today") {
-        return (
-          appDate.getFullYear() === now.getFullYear() &&
-          appDate.getMonth() === now.getMonth() &&
-          appDate.getDate() === now.getDate()
-        );
+        return appDate.toDateString() === now.toDateString();
       } else if (filterType === "week") {
         const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay()); // Sunday
+        weekStart.setDate(now.getDate() - now.getDay());
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6); // Saturday
+        weekEnd.setDate(weekStart.getDate() + 6);
         return appDate >= weekStart && appDate <= weekEnd;
       } else if (filterType === "month") {
-        return (
-          appDate.getFullYear() === now.getFullYear() &&
-          appDate.getMonth() === now.getMonth()
-        );
+        return appDate.getFullYear() === now.getFullYear() &&
+               appDate.getMonth() === now.getMonth();
       }
       return true;
     });
-
     setFilteredAppointments(filtered);
   }, [filterType, appointments]);
 
   // ---------- Compute summary ----------
   const totalAppointments = filteredAppointments.length;
-  const booked = filteredAppointments.filter(a => a.status === "booked").length;
-  const completed = filteredAppointments.filter(a => a.status === "completed").length;
-  const canceled = filteredAppointments.filter(a => a.status === "canceled").length;
+  const booked = filteredAppointments.filter(a => a.status === "PENDING" || a.status === "booked").length;
+  const completed = filteredAppointments.filter(a => a.status === "DOCTOR_COMPLETED" || a.status === "NURSE_COMPLETED").length;
+  const canceled = filteredAppointments.filter(a => a.status === "REJECTED" || a.status === "CANCELED").length;
 
   // ---------- Bar chart: appointments per category ----------
   const appointmentsByCategory = filteredAppointments.reduce((acc, a) => {
@@ -114,7 +104,8 @@ export default function Report() {
               borderRadius: 6,
               border: filterType === ft ? "2px solid #1976d2" : "1px solid #ccc",
               background: filterType === ft ? "#e8f0ff" : "#fff",
-              cursor: "pointer"
+              cursor: "pointer",
+              fontWeight: filterType === ft ? "bold" : "normal"
             }}
           >
             {ft.charAt(0).toUpperCase() + ft.slice(1)}
@@ -123,20 +114,20 @@ export default function Report() {
       </div>
 
       {loading ? (
-        <p>Loading...</p>
+        <p style={{ textAlign: "center" }}>Loading...</p>
       ) : (
         <>
           {/* Summary cards */}
-          <div style={{ display: "flex", gap: 20, marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 20, marginBottom: 30, flexWrap: "wrap" }}>
             {[
-              { title: "Total", value: totalAppointments },
-              { title: "Booked", value: booked },
-              { title: "Completed", value: completed },
-              { title: "Canceled", value: canceled },
+              { title: "Total", value: totalAppointments, color: "#1976d2" },
+              { title: "Booked", value: booked, color: "#f39c12" },
+              { title: "Completed", value: completed, color: "#2ecc71" },
+              { title: "Canceled", value: canceled, color: "#e74c3c" },
             ].map((card) => (
-              <div key={card.title} style={cardStyle}>
+              <div key={card.title} style={{ ...cardStyle, borderTop: `4px solid ${card.color}` }}>
                 <h4>{card.title}</h4>
-                <p>{card.value}</p>
+                <p style={{ fontSize: 20, fontWeight: "bold", marginTop: 8 }}>{card.value}</p>
               </div>
             ))}
           </div>
@@ -196,4 +187,5 @@ const cardStyle = {
   background: "#f5f5f5",
   textAlign: "center",
   flex: 1,
+  minWidth: 120
 };
