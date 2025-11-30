@@ -16,17 +16,18 @@ export default function DoctorDashboard() {
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
   const [nurses, setNurses] = useState([]);
+  const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   /* ------------------------------------------------------
-     LOAD DOCTOR + CATEGORIES
+     LOAD DOCTOR DATA + CATEGORY + NURSES + APPOINTMENTS
   ------------------------------------------------------ */
   useEffect(() => {
     if (!token) return;
 
     const loadData = async () => {
       try {
-        // Doctor details
+        // Fetch doctor info
         const resUser = await axios.get(`${BASE_URL}/doctor/dashboard`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -34,20 +35,25 @@ export default function DoctorDashboard() {
         const doctor = resUser.data.user;
         setUser(doctor);
 
-        // Load categories
+        // Fetch departments(category)
         const resCat = await axios.get(`${BASE_URL}/doctor/categories`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
         setCategories(resCat.data);
 
-        // Load nurses if doctor approved
+        // Fetch nurse list if doctor approved
         if (doctor.isVerified && doctor.selectedCategory) {
           const resNurse = await axios.get(`${BASE_URL}/doctor/nurse`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           setNurses(resNurse.data);
         }
+
+        // Fetch appointments
+        const resAppt = await axios.get(`${BASE_URL}/appointment/appointments`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAppointments(resAppt.data);
 
         setLoading(false);
       } catch (err) {
@@ -116,7 +122,6 @@ export default function DoctorDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // refresh nurse list
       const updated = await axios.get(`${BASE_URL}/doctor/nurse`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -127,6 +132,30 @@ export default function DoctorDashboard() {
     } catch (err) {
       console.error(err);
       alert("Error updating nurse");
+    }
+  };
+
+  /* ------------------------------------------------------
+     APPOINTMENT ACTIONS
+  ------------------------------------------------------ */
+  const updateAppointment = async (id, action) => {
+    try {
+      await axios.put(
+        `${BASE_URL}/appointment/appointment/${id}`,
+        { action },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const refreshed = await axios.get(`${BASE_URL}/appointment/appointments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setAppointments(refreshed.data);
+
+      alert("Appointment updated");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update appointment");
     }
   };
 
@@ -143,7 +172,7 @@ export default function DoctorDashboard() {
         <option value="">Select Department</option>
         {categories.map((c) => (
           <option key={c._id} value={c._id}>
-            {c.name} ({c.hospitalName})
+            {c.name}
           </option>
         ))}
       </select>
@@ -217,6 +246,71 @@ export default function DoctorDashboard() {
   );
 
   /* ------------------------------------------------------
+     UI: APPOINTMENT TABLE
+  ------------------------------------------------------ */
+  const renderAppointmentTable = () => (
+    <table style={tableStyle}>
+      <thead>
+        <tr>
+          <th style={thStyle}>Patient</th>
+          <th style={thStyle}>Date</th>
+          <th style={thStyle}>Time</th>
+          <th style={thStyle}>Description</th>
+          <th style={thStyle}>Status</th>
+          <th style={thStyle}>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {appointments && appointments.length > 0 ? (
+          appointments.map((a, i) => (
+            <tr key={a._id} style={trStyle(i)}>
+              <td style={tdStyle}>{a.user?.name || "-"}</td>
+              <td style={tdStyle}>{a.date}</td>
+              <td style={tdStyle}>{a.time}</td>
+              <td style={tdStyle}>{a.description || "-"}</td>
+              <td style={tdStyle}>{a.status}</td>
+              <td style={tdStyle}>
+                {a.status === "PENDING" ? (
+                  <>
+                    <button
+                      style={actionBtnStyle("green")}
+                      onClick={() => updateAppointment(a._id, "accept")}
+                    >
+                      Accept
+                    </button>
+
+                    <button
+                      style={actionBtnStyle("red")}
+                      onClick={() => updateAppointment(a._id, "reject")}
+                    >
+                      Reject
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    style={actionBtnStyle("orange")}
+                    onClick={() => updateAppointment(a._id, "complete")}
+                  >
+                    Complete
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))
+        ) : (
+          <tr>
+            <td style={tdStyle} colSpan={6} align="center">
+              No appointments
+            </td>
+          </tr>
+        )}
+      </tbody>
+
+    </table>
+  );
+
+  /* ------------------------------------------------------
      DASHBOARD VIEW
   ------------------------------------------------------ */
   const renderDashboard = () => (
@@ -225,7 +319,7 @@ export default function DoctorDashboard() {
         renderCategorySelection()
       ) : !user.isVerified ? (
         <p style={{ color: "orange", marginTop: "20px" }}>
-          Waiting for admin approval...
+          Waiting for admin approval…
         </p>
       ) : (
         <>
@@ -236,7 +330,7 @@ export default function DoctorDashboard() {
     </div>
   );
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p>Loading…</p>;
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -253,7 +347,7 @@ export default function DoctorDashboard() {
             <p style={{ color: "#aaa" }}>{user?.email}</p>
           </div>
 
-          {["Dashboard", "Nurses", "Profile"].map((menu) => (
+          {["Dashboard", "Nurses", "Appointments", "Profile"].map((menu) => (
             <div
               key={menu}
               style={menuItemStyle(activeSection === menu)}
@@ -275,7 +369,8 @@ export default function DoctorDashboard() {
       <div style={{ flex: 1, marginLeft: "250px", padding: "2rem" }}>
         {activeSection === "Dashboard" && renderDashboard()}
         {activeSection === "Nurses" && renderNurseTable()}
-        {activeSection === "Profile" && <ProfileSettings />}  {/* ✅ YOUR PROFILE PAGE */}
+        {activeSection === "Appointments" && renderAppointmentTable()}
+        {activeSection === "Profile" && <ProfileSettings />}
       </div>
     </div>
   );
@@ -370,10 +465,10 @@ const actionBtnStyle = (color) => ({
     color === "green"
       ? "#4CAF50"
       : color === "orange"
-      ? "#FF9800"
-      : color === "red"
-      ? "#f44336"
-      : "#777",
+        ? "#FF9800"
+        : color === "red"
+          ? "#f44336"
+          : "#777",
   border: "none",
   color: "#fff",
 });
