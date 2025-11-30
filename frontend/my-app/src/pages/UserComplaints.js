@@ -44,7 +44,7 @@ const Complaint = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/admin/category", {
+        const res = await axios.get("https://hospital-management-project-gf55.onrender.com/api/admin/category", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCategories(res.data);
@@ -65,7 +65,7 @@ const Complaint = () => {
       }
       try {
         const res = await axios.get(
-          "http://localhost:5000/api/employee/selectedsubcategories",
+          "https://hospital-management-project-gf55.onrender.com/api/employee/selectedsubcategories",
           {
             headers: { Authorization: `Bearer ${token}` },
             params: { categoryId: selectedCategory },
@@ -133,7 +133,7 @@ const Complaint = () => {
     try {
       setLoading(true);
       const res = await axios.post(
-        "http://localhost:5000/api/complaints/create",
+        "https://hospital-management-project-gf55.onrender.com/api/complaints/create",
         {
           category: selectedCategory,
           subCategory: selectedSubCategory,

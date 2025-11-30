@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = "http://localhost:5000/api/hospital";
+const API = "https://hospital-management-project-gf55.onrender.com/api/hospital";
 
 // Create user under hospital
 export const registerHospital = (data, token) =>
@@ -20,4 +20,4 @@ export const rejectHospital = (hospitalId, token) =>
     headers: { Authorization: `Bearer ${token}` },
   });
 
-export const getHospitals = () => axios.get("http://localhost:5000/api/hospital/list");
+export const getHospitals = () => axios.get("https://hospital-management-project-gf55.onrender.com/api/hospital/list");
