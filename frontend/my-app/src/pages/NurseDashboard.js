@@ -238,17 +238,38 @@ export default function NurseDashboard() {
               <b>Description:</b> {appt.description}
             </p>
 
+            {/* STATUS BADGE */}
             <p>
               <b>Status:</b>{" "}
-              <span style={{ color: "green" }}>{appt.status}</span>
+              <span
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: "6px",
+                  color: "#fff",
+                  background:
+                    appt.status === "NURSE_COMPLETED" ? "green" : "orange",
+                }}
+              >
+                {appt.status}
+              </span>
             </p>
 
-            {/* Complete Button */}
+            {/* DISABLE AFTER COMPLETE */}
             <button
-              style={completeBtnStyle}
+              style={{
+                ...completeBtnStyle,
+                opacity: appt.status === "NURSE_COMPLETED" ? 0.5 : 1,
+                cursor:
+                  appt.status === "NURSE_COMPLETED"
+                    ? "not-allowed"
+                    : "pointer",
+              }}
+              disabled={appt.status === "NURSE_COMPLETED"}
               onClick={() => markAsComplete(appt._id)}
             >
-              Mark as Complete
+              {appt.status === "NURSE_COMPLETED"
+                ? "Completed"
+                : "Mark as Complete"}
             </button>
 
             {/* Prescription Input */}
@@ -308,15 +329,17 @@ export default function NurseDashboard() {
             <p style={{ color: "#aaa" }}>{user?.email}</p>
           </div>
 
-          {["Dashboard", "My Doctor", "Appointments", "Profile"].map((menu) => (
-            <div
-              key={menu}
-              style={menuItemStyle(activeSection === menu)}
-              onClick={() => setActiveSection(menu)}
-            >
-              {menu}
-            </div>
-          ))}
+          {["Dashboard", "My Doctor", "Appointments", "Profile"].map(
+            (menu) => (
+              <div
+                key={menu}
+                style={menuItemStyle(activeSection === menu)}
+                onClick={() => setActiveSection(menu)}
+              >
+                {menu}
+              </div>
+            )
+          )}
         </div>
 
         <div style={{ padding: "0.5rem" }}>
@@ -434,4 +457,3 @@ const presBtnStyle = {
   marginTop: "10px",
   cursor: "pointer",
 };
-
