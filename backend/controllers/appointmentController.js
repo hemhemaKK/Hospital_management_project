@@ -39,7 +39,6 @@ const getDoctorsByCategory = async (req, res) => {
       status: "ACTIVE"
     })
     .select("name email profilePic selectedCategory");
-    console.log(doctors)
     res.status(200).json(doctors);
   } catch (err) {
     console.error("getDoctorsByCategory error:", err);
@@ -149,11 +148,90 @@ const deleteAppointment = async (req, res) => {
   }
 };
 
+/* ----------------------------------------------------
+   GET ALL APPOINTMENTS FOR LOGGED-IN DOCTOR
+----------------------------------------------------- */
+const getDoctorAppointments = async (req, res) => {
+  try {
+    const doctorId = req.user._id.toString();
+
+    // Find all users who have an appointment with this doctor
+    const users = await User.find({ "appointments.doctor": doctorId })
+      .populate("appointments.user", "name email profilePic")
+      .populate("appointments.category", "name")
+      .populate("appointments.doctor", "name email");
+
+    let allAppointments = [];
+
+    users.forEach(user => {
+      user.appointments.forEach(appt => {
+        if (appt.doctor && appt.doctor.toString() === doctorId) {
+          allAppointments.push({
+            ...appt.toObject(),
+            user: {
+              _id: user._id,
+              name: user.name,
+              email: user.email,
+            }
+          });
+        }
+      });
+    });
+
+    res.status(200).json(allAppointments);
+  } catch (err) {
+    console.error("getDoctorAppointments ERROR:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ----------------------------------------------------
+   UPDATE APPOINTMENT STATUS FOR DOCTOR
+----------------------------------------------------- */
+const updateAppointmentStatus = async (req, res) => {
+  try {
+    const doctorId = req.user._id.toString();
+    const appointmentId = req.params.appointmentId;
+    const { action } = req.body;
+
+    const users = await User.find({ "appointments._id": appointmentId });
+
+    if (!users.length)
+      return res.status(404).json({ message: "Appointment not found" });
+
+    let updatedAppt = null;
+
+    for (let user of users) {
+      const appt = user.appointments.id(appointmentId);
+
+      if (!appt) continue;
+      if (appt.doctor.toString() !== doctorId) continue;
+
+      if (action === "accept") appt.status = "DOCTOR_ACCEPTED";
+      if (action === "reject") appt.status = "REJECTED";
+      if (action === "complete") appt.status = "DOCTOR_COMPLETED";
+
+      await user.save();
+      updatedAppt = appt;
+    }
+
+    res.status(200).json({
+      message: "Status updated successfully",
+      appointment: updatedAppt,
+    });
+  } catch (err) {
+    console.error("updateAppointmentStatus ERROR:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   getCategories,
   getDoctorsByCategory,
   createAppointment,
   getAvailableSlots,
   getUserAppointments,
-  deleteAppointment
+  deleteAppointment,
+  getDoctorAppointments,
+  updateAppointmentStatus
 };

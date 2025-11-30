@@ -7,8 +7,7 @@ const {
   createAppointment,
   getAvailableSlots,
   getUserAppointments,
-  deleteAppointment,
-  getAppointmentsByDoctorAndDate
+  deleteAppointment
 } = require("../controllers/appointmentController");
 
 const router = express.Router();
@@ -19,7 +18,5 @@ router.post("/create", requireAuth, createAppointment);
 router.get("/slots/:doctorId/:date", requireAuth, getAvailableSlots);
 router.get("/user/:userId", requireAuth, getUserAppointments);
 router.delete("/:userId/:appointmentId", requireAuth, deleteAppointment);
-router.get("/doctor/:doctorId/:date", requireAuth, getAppointmentsByDoctorAndDate);
-
 
 module.exports = router;
