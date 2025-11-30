@@ -610,7 +610,7 @@ const contentStyle = (isMobile) => ({
   padding: isMobile ? "80px 15px 15px 15px" : "2rem",
   transition: "all 0.3s ease-in-out",
   minHeight: "100vh",
-  width: isMobile ? "100%" : "calc(100% - 250px)",
+  // width: isMobile ? "100%" : "calc(100% - 250px)",
 });
 
 const selectStyle = {
@@ -618,7 +618,7 @@ const selectStyle = {
   marginRight: "10px",
   borderRadius: "6px",
   width: isMobile ? "100%" : "auto",
-  marginBottom: isMobile ? "10px" : "0",
+  // marginBottom: isMobile ? "10px" : "0",
 };
 
 const chooseBtnStyle = {
@@ -628,7 +628,7 @@ const chooseBtnStyle = {
   color: "white",
   borderRadius: "6px",
   cursor: "pointer",
-  width: isMobile ? "100%" : "auto",
+  // width: isMobile ? "100%" : "auto",
 };
 
 const doctorBox = {
@@ -658,8 +658,8 @@ const completeBtnStyle = {
   borderRadius: "6px",
   marginTop: "10px",
   cursor: "pointer",
-  width: isMobile ? "100%" : "auto",
-  marginRight: isMobile ? "0" : "10px",
+  // width: isMobile ? "100%" : "auto",
+  // marginRight: isMobile ? "0" : "10px",
 };
 
 const presBtnStyle = {
