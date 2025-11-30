@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend, ResponsiveContainer
 } from "recharts";
 
-const BASE_URL = "https://hospital-management-project-gf55.onrender.com";
+const BASE_URL = "http://localhost:5000";
 const COLORS = ["#1976d2", "#2ecc71", "#e74c3c"]; // blue, green, red
 
 export default function Report() {
@@ -12,7 +12,7 @@ export default function Report() {
   const [appointments, setAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filterType, setFilterType] = useState("all"); // all, today, week, month
+  const [filterType, setFilterType] = useState("all");
 
   const loadAppointments = async () => {
     if (!token) return;
@@ -26,6 +26,7 @@ export default function Report() {
       const res = await axios.get(`${BASE_URL}/api/appointment/user/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       setAppointments(res.data || []);
       setFilteredAppointments(res.data || []);
     } catch (err) {
@@ -57,32 +58,35 @@ export default function Report() {
         weekEnd.setDate(weekStart.getDate() + 6);
         return appDate >= weekStart && appDate <= weekEnd;
       } else if (filterType === "month") {
-        return appDate.getFullYear() === now.getFullYear() &&
-               appDate.getMonth() === now.getMonth();
+        return (
+          appDate.getFullYear() === now.getFullYear() &&
+          appDate.getMonth() === now.getMonth()
+        );
       }
       return true;
     });
+
     setFilteredAppointments(filtered);
   }, [filterType, appointments]);
 
-  // ---------- Compute summary ----------
   const totalAppointments = filteredAppointments.length;
-  const booked = filteredAppointments.filter(a => a.status === "PENDING" || a.status === "booked").length;
-  const completed = filteredAppointments.filter(a => a.status === "DOCTOR_COMPLETED" || a.status === "NURSE_COMPLETED").length;
-  const canceled = filteredAppointments.filter(a => a.status === "REJECTED" || a.status === "CANCELED").length;
+  const booked = filteredAppointments.filter(a => a.status === "PENDING").length;
+  const completed = filteredAppointments.filter(a => 
+    a.status === "DOCTOR_COMPLETED" || a.status === "NURSE_COMPLETED"
+  ).length;
+  const canceled = filteredAppointments.filter(a => a.status === "REJECTED").length;
 
-  // ---------- Bar chart: appointments per category ----------
   const appointmentsByCategory = filteredAppointments.reduce((acc, a) => {
     const name = a.category?.name || "Uncategorized";
     acc[name] = (acc[name] || 0) + 1;
     return acc;
   }, {});
+
   const barData = Object.keys(appointmentsByCategory).map(cat => ({
     category: cat,
     count: appointmentsByCategory[cat],
   }));
 
-  // ---------- Pie chart: status distribution ----------
   const pieData = [
     { name: "Booked", value: booked },
     { name: "Completed", value: completed },
@@ -90,25 +94,22 @@ export default function Report() {
   ];
 
   return (
-    <div style={{ maxWidth: 1000, margin: "40px auto", padding: 20, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
-      <h2 style={{ textAlign: "center", marginBottom: 18 }}>My Appointments Report</h2>
+    <div style={reportContainer}>
 
-      {/* Date filter */}
-      <div style={{ marginBottom: 20, display: "flex", gap: 12, justifyContent: "center" }}>
+      <h2 style={titleStyle}>My Appointments Report</h2>
+
+      {/* Filter Buttons */}
+      <div style={filterContainer}>
         {["all", "today", "week", "month"].map(ft => (
           <button
             key={ft}
             onClick={() => setFilterType(ft)}
             style={{
-              padding: "8px 16px",
-              borderRadius: 6,
-              border: filterType === ft ? "2px solid #1976d2" : "1px solid #ccc",
-              background: filterType === ft ? "#e8f0ff" : "#fff",
-              cursor: "pointer",
-              fontWeight: filterType === ft ? "bold" : "normal"
+              ...filterButton,
+              ...(filterType === ft ? activeFilterButton : {})
             }}
           >
-            {ft.charAt(0).toUpperCase() + ft.slice(1)}
+            {ft.toUpperCase()}
           </button>
         ))}
       </div>
@@ -117,62 +118,71 @@ export default function Report() {
         <p style={{ textAlign: "center" }}>Loading...</p>
       ) : (
         <>
-          {/* Summary cards */}
-          <div style={{ display: "flex", gap: 20, marginBottom: 30, flexWrap: "wrap" }}>
+          {/* Summary Cards */}
+          <div style={summaryRow}>
             {[
               { title: "Total", value: totalAppointments, color: "#1976d2" },
               { title: "Booked", value: booked, color: "#f39c12" },
               { title: "Completed", value: completed, color: "#2ecc71" },
               { title: "Canceled", value: canceled, color: "#e74c3c" },
-            ].map((card) => (
-              <div key={card.title} style={{ ...cardStyle, borderTop: `4px solid ${card.color}` }}>
+            ].map((card, index) => (
+              <div
+                key={card.title}
+                style={{
+                  ...summaryCard,
+                  borderTop: `4px solid ${card.color}`,
+                  animationDelay: `${index * 0.15}s`,
+                }}
+              >
                 <h4>{card.title}</h4>
-                <p style={{ fontSize: 20, fontWeight: "bold", marginTop: 8 }}>{card.value}</p>
+                <p style={{ fontSize: 20, fontWeight: "bold" }}>{card.value}</p>
               </div>
             ))}
           </div>
 
           {/* Charts */}
-          <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
-            {/* Bar chart */}
-            <div style={{ flex: 1, minWidth: 300, height: 300 }}>
+          <div style={chartRow}>
+
+            {/* BAR CHART */}
+            <div style={chartBox}>
               <h4>Appointments per Category</h4>
-              {barData.length === 0 ? <p>No data</p> : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
+              {barData.length === 0 ? (
+                <p>No data available</p>
+              ) : (
+                <ResponsiveContainer width="100%" height="90%">
+                  <BarChart data={barData}>
                     <XAxis dataKey="category" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#1976d2" />
+                    <Bar dataKey="count" fill="#1976d2" animationDuration={900} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </div>
 
-            {/* Pie chart */}
-            <div style={{ flex: 1, minWidth: 300, height: 300 }}>
+            {/* PIE CHART */}
+            <div style={chartBox}>
               <h4>Status Distribution</h4>
-              {totalAppointments === 0 ? <p>No data</p> : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      label
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Legend verticalAlign="bottom" />
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
+              <ResponsiveContainer width="100%" height="90%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={70}
+                    label
+                    animationDuration={900}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Legend verticalAlign="bottom" height={20} />
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </>
@@ -181,11 +191,76 @@ export default function Report() {
   );
 }
 
-const cardStyle = {
-  padding: 20,
+/* ✨ SCREEN-FITTED, CLEANER RESPONSIVE STYLES */
+
+const reportContainer = {
+  maxWidth: 900,            // REDUCED WIDTH ✔
+  margin: "30px auto",
+  padding: 35,
+  background: "#fff",
   borderRadius: 8,
-  background: "#f5f5f5",
+  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+};
+
+const titleStyle = {
+  textAlign: "center",
+  marginBottom: 15,
+  fontSize: 22,
+  fontWeight: "bold",
+};
+
+const filterContainer = {
+  marginBottom: 15,
+  display: "flex",
+  gap: 10,
+  justifyContent: "center",
+};
+
+const filterButton = {
+  padding: "6px 12px",
+  borderRadius: 6,
+  border: "1px solid #ccc",
+  background: "#fffcfcff",
+  cursor: "pointer",
+  fontWeight: "bold",
+  transition: "0.2s",
+};
+
+const activeFilterButton = {
+  background: "#1976d2",
+  color: "#fff",
+  border: "2px solid #145ea8",
+  transform: "scale(1.05)",
+};
+
+const summaryRow = {
+  display: "flex",
+  gap: 15,
+  marginBottom: 20,
+  flexWrap: "wrap",
+};
+
+const summaryCard = {
+  padding: 15,
+  borderRadius: 8,
+  background: "#f7f7f7",
   textAlign: "center",
   flex: 1,
-  minWidth: 120
+  minWidth: 120,
+};
+
+const chartRow = {
+  display: "flex",
+  gap: 20,
+  flexWrap: "wrap",
+};
+
+const chartBox = {
+  flex: 1,
+  minWidth: 260,
+  height: 250,        // REDUCED HEIGHT ✔
+  padding: 10,
+  borderRadius: 8,
+  background: "#ffffffff",
+  boxShadow: "0 3px 10px rgba(0,0,0,0.05)",
 };
