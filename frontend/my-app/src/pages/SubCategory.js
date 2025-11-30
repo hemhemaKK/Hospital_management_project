@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = "https://hospital-management-project-gf55.onrender.com/api";
 
 const SubCategoryDashboard = () => {
   const token = localStorage.getItem("token");

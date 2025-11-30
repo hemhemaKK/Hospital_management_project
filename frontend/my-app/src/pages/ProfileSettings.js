@@ -139,7 +139,7 @@ export default function ProfileSettings() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        "http://localhost:5000/api/profile/update",
+        "https://hospital-management-project-gf55.onrender.com/api/profile/update",
         profileData,
         { 
           headers: { 
@@ -167,7 +167,7 @@ export default function ProfileSettings() {
   const handleSubmitReview = async () => {
     try {
       await axios.post(
-        "https://improve-my-city-backend-hj52.onrender.com/api/review",
+        "https://hospital-management-project-gf55.onrender.com/api/review",
         { title, comment, rating },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );

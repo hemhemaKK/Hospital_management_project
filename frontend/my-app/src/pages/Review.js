@@ -20,7 +20,7 @@ const ReviewPopup = ({ user }) => {
 
     try {
       await axios.post(
-        "http://localhost:5000/api/review",
+        "https://hospital-management-project-gf55.onrender.com/api/review",
         { title, comment, rating },
         { headers: { Authorization: `Bearer ${token}` } }
       );

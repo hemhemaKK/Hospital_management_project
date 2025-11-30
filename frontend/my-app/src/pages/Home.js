@@ -49,7 +49,7 @@ export default function Home() {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/review");
+        const res = await axios.get("https://hospital-management-project-gf55.onrender.com/api/review");
 
         if (res.data.reviews && res.data.reviews.length > 0) {
           const mapped = res.data.reviews.map((r) => ({

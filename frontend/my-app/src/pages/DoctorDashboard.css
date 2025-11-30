@@ -182,7 +182,7 @@ html, body {
   background: #00838f;
   border: none;
   color: white;
-  borderRadius: 6px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
   font-size: 14px;

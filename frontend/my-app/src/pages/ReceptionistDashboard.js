@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = "https://hospital-management-project-gf55.onrender.com/api";
 
 export default function ReceptionistDashboard() {
   const navigate = useNavigate();

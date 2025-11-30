@@ -52,7 +52,7 @@ const Chatbot = ({ userId }) => {
     setIsLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/chatbot", {
+      const res = await axios.post("https://hospital-management-project-gf55.onrender.com/api/chatbot", {
         userId,
         message: userMessage,
       });

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./AdminDashboard.css";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://hospital-management-project-gf55.onrender.com";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();

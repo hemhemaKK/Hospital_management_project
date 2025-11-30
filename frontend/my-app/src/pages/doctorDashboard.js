@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import ProfileSettings from "./ProfileSettings";
 import "./DoctorDashboard.css";
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = "https://hospital-management-project-gf55.onrender.com/api";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
