@@ -14,15 +14,22 @@ const {
 
 const router = express.Router();
 
+// CATEGORY & DOCTOR LIST
 router.get("/categories", requireAuth, getCategories);
 router.get("/doctors/:categoryId", requireAuth, getDoctorsByCategory);
+
+// CREATE APPOINTMENT
 router.post("/create", requireAuth, createAppointment);
 
+// DOCTOR SIDE APPOINTMENTS
 router.get("/appointments", requireAuth, getDoctorAppointments);
 router.put("/appointment/:appointmentId", requireAuth, updateAppointmentStatus);
 
-router.get("/slots/:doctorId/:date", requireAuth, getAvailableSlots);
+// USER SIDE APPOINTMENTS
 router.get("/user/:userId", requireAuth, getUserAppointments);
 router.delete("/:userId/:appointmentId", requireAuth, deleteAppointment);
+
+// AVAILABLE SLOTS
+router.get("/slots/:doctorId/:date", requireAuth, getAvailableSlots);
 
 module.exports = router;
