@@ -83,28 +83,45 @@ export default function Appointment() {
   }, [token, categoryId]);
 
   // ---------- When doctor OR date changes -> load available slots ----------
-  useEffect(() => {
-    if (!token || !doctorId || !date) {
-      setAvailableSlots([]);
+useEffect(() => {
+  if (!token || !doctorId || !date) {
+    setAvailableSlots([]);
+    setSelectedSlot("");
+    return;
+  }
+
+  const fetchSlots = async () => {
+    try {
+      // 1) get available slots from backend
+      const res = await axios.get(
+        `${BASE_URL}/api/appointment/slots/${doctorId}/${date}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      let slots = res.data?.availableSlots || [];
+
+      // 2) fetch all appointments for this doctor on this date
+      const bookedRes = await axios.get(
+        `${BASE_URL}/api/admin/appointments/doctor/${doctorId}/${date}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const bookedTimes = bookedRes.data?.map((b) => b.time) || [];
+
+      // 3) remove booked slots
+      const filtered = slots.filter((slot) => !bookedTimes.includes(slot));
+
+      setAvailableSlots(filtered);
       setSelectedSlot("");
-      return;
+    } catch (err) {
+      console.error("Error fetching slots:", err);
+      setAvailableSlots([]);
     }
+  };
 
-    const fetchSlots = async () => {
-      try {
-        const res = await axios.get(`${BASE_URL}/api/appointment/slots/${doctorId}/${date}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setAvailableSlots(res.data?.availableSlots || []);
-        setSelectedSlot("");
-      } catch (err) {
-        console.error("Error fetching slots:", err);
-        setAvailableSlots([]);
-      }
-    };
+  fetchSlots();
+}, [token, doctorId, date]);
 
-    fetchSlots();
-  }, [token, doctorId, date]);
 
   // ---------- Load user's appointments ----------
   const loadAppointments = async (uid) => {

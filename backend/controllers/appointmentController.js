@@ -93,8 +93,8 @@ const getAvailableSlots = async (req, res) => {
     const users = await User.find({ "appointments.doctor": doctorId });
 
     const booked = [];
-    users.forEach((u) => {
-      u.appointments.forEach((a) => {
+    users.forEach(u => {
+      u.appointments.forEach(a => {
         if (a.date === date && a.doctor.toString() === doctorId) {
           booked.push(a.time);
         }
@@ -107,15 +107,13 @@ const getAvailableSlots = async (req, res) => {
       slots.push(`${h}:30`);
     }
 
-    const free = slots.filter((s) => !booked.includes(s));
+    const free = slots.filter(s => !booked.includes(s));
 
-    // FIX: return correct structure
-    res.status(200).json({ availableSlots: free });
+    res.status(200).json(free);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 /* -------------------------------------------
    5. GET USER APPOINTMENTS
