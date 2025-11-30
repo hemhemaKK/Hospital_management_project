@@ -73,7 +73,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={{ width: "90vw",margin:"auto", overflowX: "hidden", fontFamily: "Inter, sans-serif" }}>
+    <div style={{ width: "100vw",margin:"auto", overflowX: "hidden", fontFamily: "Inter, sans-serif" }}>
       <Navbar />
 
       {/* ---------------------------- HERO SECTION ---------------------------- */}
