@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import ProfileSettings from "./ProfileSettings";
+import "./DoctorDashboard.css";
 
 const BASE_URL = "http://localhost:5000/api";
 
@@ -10,13 +11,33 @@ export default function DoctorDashboard() {
   const token = localStorage.getItem("token");
 
   const [activeSection, setActiveSection] = useState("Dashboard");
-
   const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-
   const [nurses, setNurses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+
+  /* ------------------------------------------------------
+     MOBILE DETECTION
+  ------------------------------------------------------ */
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setSidebarVisible(false);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
 
   /* ------------------------------------------------------
      LOAD DOCTOR + CATEGORIES
@@ -131,12 +152,30 @@ export default function DoctorDashboard() {
   };
 
   /* ------------------------------------------------------
+     MOBILE MENU HANDLERS
+  ------------------------------------------------------ */
+  const handleMenuClick = (menu) => {
+    setActiveSection(menu);
+    if (isMobile) {
+      setSidebarVisible(false);
+    }
+  };
+
+  const toggleSidebar = () => {
+    setSidebarVisible(!sidebarVisible);
+  };
+
+  const closeSidebar = () => {
+    setSidebarVisible(false);
+  };
+
+  /* ------------------------------------------------------
      UI: CATEGORY SELECTION
   ------------------------------------------------------ */
   const renderCategorySelection = () => (
     <div style={{ marginTop: "20px" }}>
       <select
-        style={selectStyle}
+        className="select-field"
         value={selectedCategoryId}
         onChange={(e) => setSelectedCategoryId(e.target.value)}
       >
@@ -148,72 +187,141 @@ export default function DoctorDashboard() {
         ))}
       </select>
 
-      <button onClick={chooseCategory} style={chooseBtnStyle}>
+      <button onClick={chooseCategory} className="choose-btn">
         Submit
       </button>
     </div>
   );
 
   /* ------------------------------------------------------
-     UI: NURSE TABLE
+     UI: NURSE TABLE (Desktop)
   ------------------------------------------------------ */
   const renderNurseTable = () => (
-    <table style={tableStyle}>
-      <thead>
-        <tr>
-          <th style={thStyle}>Name</th>
-          <th style={thStyle}>Email</th>
-          <th style={thStyle}>Phone</th>
-          <th style={thStyle}>Status</th>
-          <th style={thStyle}>Actions</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {nurses.map((n, i) => (
-          <tr key={n._id} style={trStyle(i)}>
-            <td style={tdStyle}>{n.name}</td>
-            <td style={tdStyle}>{n.email}</td>
-            <td style={tdStyle}>{n.phone || "-"}</td>
-            <td style={tdStyle}>{n.isVerified ? "Approved" : "Pending"}</td>
-
-            <td style={tdStyle}>
-              {!n.isVerified ? (
-                <>
-                  <button
-                    style={actionBtnStyle("green")}
-                    onClick={() => handleNurseAction(n._id, "approve")}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    style={actionBtnStyle("red")}
-                    onClick={() => handleNurseAction(n._id, "reject")}
-                  >
-                    Reject
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    style={actionBtnStyle("orange")}
-                    onClick={() => handleNurseAction(n._id, "disapprove")}
-                  >
-                    Disapprove
-                  </button>
-                  <button
-                    style={actionBtnStyle("gray")}
-                    onClick={() => handleNurseAction(n._id, "delete")}
-                  >
-                    Delete
-                  </button>
-                </>
-              )}
-            </td>
+    <div className="table-container">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Actions</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+
+        <tbody>
+          {nurses.map((n, i) => (
+            <tr key={n._id}>
+              <td>{n.name}</td>
+              <td>{n.email}</td>
+              <td>{n.phone || "-"}</td>
+              <td>
+                <span className={n.isVerified ? "status-approved" : "status-pending"}>
+                  {n.isVerified ? "Approved" : "Pending"}
+                </span>
+              </td>
+
+              <td>
+                {!n.isVerified ? (
+                  <>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => handleNurseAction(n._id, "approve")}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => handleNurseAction(n._id, "reject")}
+                    >
+                      Reject
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="btn btn-warning"
+                      onClick={() => handleNurseAction(n._id, "disapprove")}
+                    >
+                      Disapprove
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => handleNurseAction(n._id, "delete")}
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  /* ------------------------------------------------------
+     UI: NURSE MOBILE CARDS
+  ------------------------------------------------------ */
+  const renderNurseMobileCards = () => (
+    <div className="mobile-card-view">
+      {nurses.map((n) => (
+        <div key={n._id} className="mobile-card">
+          <div className="mobile-card-row">
+            <span className="mobile-card-label">Name:</span>
+            <span className="mobile-card-value">{n.name || "-"}</span>
+          </div>
+          <div className="mobile-card-row">
+            <span className="mobile-card-label">Email:</span>
+            <span className="mobile-card-value">{n.email || "-"}</span>
+          </div>
+          <div className="mobile-card-row">
+            <span className="mobile-card-label">Phone:</span>
+            <span className="mobile-card-value">{n.phone || "-"}</span>
+          </div>
+          <div className="mobile-card-row">
+            <span className="mobile-card-label">Status:</span>
+            <span className={`mobile-card-value ${n.isVerified ? "status-approved" : "status-pending"}`}>
+              {n.isVerified ? "Approved" : "Pending"}
+            </span>
+          </div>
+          <div className="mobile-card-actions">
+            {!n.isVerified ? (
+              <>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => handleNurseAction(n._id, "approve")}
+                >
+                  Approve
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => handleNurseAction(n._id, "reject")}
+                >
+                  Reject
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="btn btn-warning"
+                  onClick={() => handleNurseAction(n._id, "disapprove")}
+                >
+                  Disapprove
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => handleNurseAction(n._id, "delete")}
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 
   /* ------------------------------------------------------
@@ -224,13 +332,14 @@ export default function DoctorDashboard() {
       {!user.selectedCategory ? (
         renderCategorySelection()
       ) : !user.isVerified ? (
-        <p style={{ color: "orange", marginTop: "20px" }}>
+        <p style={{ color: "#ff9800", marginTop: "20px", fontWeight: "bold" }}>
           Waiting for admin approval...
         </p>
       ) : (
         <>
-          <h3 style={{ marginTop: "30px" }}>Nurse List</h3>
+          <h3 style={{ marginTop: "30px", color: "#00626aee" }}>Nurse List</h3>
           {renderNurseTable()}
+          {renderNurseMobileCards()}
         </>
       )}
     </div>
@@ -239,141 +348,73 @@ export default function DoctorDashboard() {
   if (loading) return <p>Loading...</p>;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex" }}>
+      {/* Mobile Hamburger Menu */}
+      <button 
+        className={`hamburger-menu ${sidebarVisible ? 'active' : ''}`}
+        onClick={toggleSidebar}
+      >
+        <span className="hamburger-line"></span>
+        <span className="hamburger-line"></span>
+        <span className="hamburger-line"></span>
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobile && (
+        <div 
+          className={`mobile-overlay ${sidebarVisible ? 'visible' : ''}`}
+          onClick={closeSidebar}
+        />
+      )}
+
       {/* Sidebar */}
-      <div style={sidebarStyle}>
+      <div className={`sidebar ${isMobile ? (sidebarVisible ? 'mobile-visible' : 'mobile-hidden') : ''}`}>
         <div>
-          <div style={profileStyle}>
+          <div className="profile-section">
             <img
-              src={user?.profilePic || "https://via.placeholder.com/80"}
+              src={user?.profilePic || "https://i.pinimg.com/originals/ec/8c/e0/ec8ce013e5be3d2448bddfe9e10ee5af.jpg"}
               alt="profile"
-              style={profilePicStyle}
+              className="profile-pic"
             />
             <h3 style={{ color: "#fff" }}>{user?.name}</h3>
-            <p style={{ color: "#aaa" }}>{user?.email}</p>
+            <p style={{ color: "#ccc" }}>{user?.email}</p>
+            {user?.selectedCategory && (
+              <p style={{ color: "#aaa", fontSize: "12px" }}>
+                Department: {user.selectedCategory.name}
+              </p>
+            )}
           </div>
 
           {["Dashboard", "Nurses", "Profile"].map((menu) => (
-            <div
+            <button
               key={menu}
-              style={menuItemStyle(activeSection === menu)}
-              onClick={() => setActiveSection(menu)}
+              className={`menu-item ${activeSection === menu ? 'active' : ''}`}
+              onClick={() => handleMenuClick(menu)}
             >
               {menu}
-            </div>
+            </button>
           ))}
         </div>
 
         <div style={{ padding: "0.5rem" }}>
-          <div style={bottomLinkStyle(false, true)} onClick={handleLogout}>
+          <button className="bottom-link" onClick={handleLogout}>
             Logout
-          </div>
+          </button>
         </div>
       </div>
 
       {/* CONTENT */}
-      <div style={{ flex: 1, marginLeft: "250px", padding: "2rem" }}>
+      <div className={`content-area ${isMobile ? 'mobile-full' : ''}`}>
         {activeSection === "Dashboard" && renderDashboard()}
-        {activeSection === "Nurses" && renderNurseTable()}
-        {activeSection === "Profile" && <ProfileSettings />}  {/* ✅ YOUR PROFILE PAGE */}
+        {activeSection === "Nurses" && (
+          <div>
+            <h2 style={{ color: "#00626aee", marginBottom: "20px" }}>Nurse Management</h2>
+            {renderNurseTable()}
+            {renderNurseMobileCards()}
+          </div>
+        )}
+        {activeSection === "Profile" && <ProfileSettings />}
       </div>
     </div>
   );
 }
-
-/* ====================== CSS ====================== */
-
-const sidebarStyle = {
-  width: "250px",
-  background: "#111",
-  height: "100vh",
-  padding: "1rem",
-  position: "fixed",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-};
-
-const profileStyle = {
-  textAlign: "center",
-  marginBottom: "20px",
-  borderBottom: "1px solid #444",
-  paddingBottom: "10px",
-};
-
-const profilePicStyle = {
-  width: "80px",
-  height: "80px",
-  borderRadius: "50%",
-  objectFit: "cover",
-};
-
-const menuItemStyle = (active) => ({
-  padding: "10px",
-  margin: "8px 0",
-  borderRadius: "6px",
-  background: active ? "#333" : "transparent",
-  color: active ? "#4CAF50" : "#fff",
-  cursor: "pointer",
-});
-
-const bottomLinkStyle = (active, isLogout = false) => ({
-  padding: "10px",
-  borderRadius: "8px",
-  textAlign: "center",
-  color: "#fff",
-  cursor: "pointer",
-  background: isLogout ? "#ff4d4d" : active ? "#222" : "transparent",
-});
-
-const selectStyle = {
-  padding: "8px",
-  marginRight: "10px",
-  borderRadius: "6px",
-};
-
-const chooseBtnStyle = {
-  padding: "8px 16px",
-  background: "#4CAF50",
-  border: "none",
-  color: "white",
-  borderRadius: "6px",
-  cursor: "pointer",
-};
-
-const tableStyle = {
-  width: "100%",
-  background: "#fff",
-  borderRadius: "10px",
-  marginTop: "20px",
-};
-
-const thStyle = {
-  background: "#000",
-  color: "#fff",
-  padding: "12px",
-};
-
-const tdStyle = {
-  padding: "12px",
-};
-
-const trStyle = (i) => ({
-  background: i % 2 === 0 ? "#f9f9f9" : "#fff",
-});
-
-const actionBtnStyle = (color) => ({
-  padding: "6px 10px",
-  margin: "2px",
-  borderRadius: "6px",
-  background:
-    color === "green"
-      ? "#4CAF50"
-      : color === "orange"
-      ? "#FF9800"
-      : color === "red"
-      ? "#f44336"
-      : "#777",
-  border: "none",
-  color: "#fff",
-});

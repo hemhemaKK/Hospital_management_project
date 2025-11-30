@@ -21,6 +21,7 @@ L.Icon.Default.mergeOptions({
 
 export default function Register() {
   const [step, setStep] = useState(1);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -28,7 +29,6 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
 
-  // Hospital registration fields
   const [isHospital, setIsHospital] = useState(false);
   const [hospitalName, setHospitalName] = useState("");
   const [phone, setPhone] = useState("");
@@ -45,6 +45,12 @@ export default function Register() {
   const isSuperAdmin = email.toLowerCase().startsWith("superadmin");
 
   useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
     async function loadHospitals() {
       try {
         const res = await getHospitals();
@@ -55,6 +61,8 @@ export default function Register() {
     }
     loadHospitals();
   }, []);
+
+  const isMobile = windowWidth <= 768;
 
   // ---------------- Map Marker on click ----------------
   function LocationMarker() {
@@ -85,7 +93,6 @@ export default function Register() {
     );
   };
 
-  // ---------------- Register handlers ----------------
   const handleRegister = async () => {
     if (!firstName || !lastName || !email || !password)
       return alert("All fields are required");
@@ -147,324 +154,395 @@ export default function Register() {
     }
   };
 
-  // ---------------- Render ----------------
   return (
-    <div style={pageWrapper}>
-      <div style={overlayStyle}></div>
-      <Link to="/" style={homeBtnStyle}>
-        <FaArrowLeft size={20} /> Home
-      </Link>
+    <div
+      style={{
+        ...layoutWrapper,
+        flexDirection: isMobile ? "column" : "row",
+      }}
+    >
+      {/* LEFT = REGISTER FORM */}
+      <div
+        style={{
+          ...formSide,
+          width: isMobile ? "100%" : "50%",
+          padding: isMobile ? "1rem" : "0",
+          paddingTop: isMobile ? "3.5rem" : "0", // Added padding for mobile to accommodate home button
+        }}
+      >
+        <Link to="/" style={{
+          ...homeBtnStyle,
+          position: isMobile ? "absolute" : "absolute",
+          top: isMobile ? "10px" : "20px",
+          left: isMobile ? "10px" : "20px",
+          zIndex: 1000, // Ensure it's above other elements
+        }}>
+          <FaArrowLeft size={20} /> Home
+        </Link>
 
-      <div style={containerStyle}>
-        {step === 1 ? (
-          <>
-            <h2 style={titleStyle}>Register</h2>
+        <div
+          style={{
+            ...containerStyle,
+            width: isMobile ? "90%" : "560px",
+            padding: isMobile ? "1.5rem" : "2rem",
+            marginTop: isMobile ? "0.5rem" : "0", // Added margin for mobile
+          }}
+        >
+          {step === 1 ? (
+            <>
+              <h2 style={titleStyle}>Register</h2>
 
-            <label style={labelStyle}>
-              <input
-                type="checkbox"
-                checked={isHospital}
-                onChange={() => setIsHospital(!isHospital)}
-                style={{ marginRight: "6px" }}
-              />
-              Register as Hospital
-            </label>
-
-            {/* Name Fields */}
-            <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.4rem" }}>
-              <div style={inputWrapperFlex}>
-                <FaUser style={iconStyle} />
+              <label style={labelStyle}>
                 <input
-                  style={inputStyle}
-                  placeholder="First Name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  type="checkbox"
+                  checked={isHospital}
+                  onChange={() => setIsHospital(!isHospital)}
+                  style={{ marginRight: "6px" }}
                 />
-              </div>
-              <div style={inputWrapperFlex}>
-                <FaUser style={iconStyle} />
-                <input
-                  style={inputStyle}
-                  placeholder="Last Name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                />
-              </div>
-            </div>
+                Register as Hospital
+              </label>
 
-            {/* Email */}
-            <div style={inputWrapper}>
-              <FaEnvelope style={iconStyle} />
-              <input
-                style={inputStyle}
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+              <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "0.4rem", marginBottom: "0.4rem" }}>
+                <div style={inputWrapperFlex}>
+                  <FaUser style={iconStyle} />
+                  <input
+                    style={inputStyle}
+                    placeholder="First Name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </div>
+                <div style={inputWrapperFlex}>
+                  <FaUser style={iconStyle} />
+                  <input
+                    style={inputStyle}
+                    placeholder="Last Name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+              </div>
 
-            {/* Normal User Hospital Selection */}
-            {!isHospital && !isSuperAdmin && (
               <div style={inputWrapper}>
-                <select
+                <FaEnvelope style={iconStyle} />
+                <input
                   style={inputStyle}
-                  value={selectedHospital}
-                  onChange={(e) => setSelectedHospital(e.target.value)}
-                >
-                  <option value="">Select Hospital</option>
-                  {hospitals.map((h) => (
-                    <option key={h._id} value={h._id}>
-                      {h.hospitalName}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
-            )}
 
-            {/* Hospital Fields */}
-            {isHospital && (
-              <>
-                <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.4rem" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={inputWrapperFlex}>
-                      <input
-                        style={inputStyle}
-                        placeholder="Hospital Name"
-                        value={hospitalName}
-                        onChange={(e) => setHospitalName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={inputWrapperFlex}>
-                      <input
-                        style={inputStyle}
-                        placeholder="Phone"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                      />
-                    </div>
-                  </div>
+              {!isHospital && !isSuperAdmin && (
+                <div style={inputWrapper}>
+                  <select
+                    style={inputStyle}
+                    value={selectedHospital}
+                    onChange={(e) => setSelectedHospital(e.target.value)}
+                  >
+                    <option value="">Select Hospital</option>
+                    {hospitals.map((h) => (
+                      <option key={h._id} value={h._id}>
+                        {h.hospitalName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+              )}
 
-                <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.4rem" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={inputWrapperFlex}>
-                      <input
-                        style={inputStyle}
-                        placeholder="Address"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={inputWrapperFlex}>
-                      <input
-                        style={inputStyle}
-                        placeholder="License Number"
-                        value={licenseNumber}
-                        onChange={(e) => setLicenseNumber(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Profile Pic + Current Location */}
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.4rem" }}>
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <label htmlFor="profilePic" style={uploadBtnCompactStyle}>
-                      {profilePic ? "Change Hospital Picture" : "Upload Hospital Picture"}
-                    </label>
-                    <input
-                      id="profilePic"
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={(e) => setProfilePic(e.target.files[0])}
-                    />
-                    {profilePic && (
-                      <div style={{ color: "#fff", fontSize: "0.7rem", marginTop: "0.2rem" }}>
-                        {profilePic.name}
+              {isHospital && (
+                <>
+                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "0.4rem", marginBottom: "0.4rem" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={inputWrapperFlex}>
+                        <input
+                          style={inputStyle}
+                          placeholder="Hospital Name"
+                          value={hospitalName}
+                          onChange={(e) => setHospitalName(e.target.value)}
+                        />
                       </div>
-                    )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={inputWrapperFlex}>
+                        <input
+                          style={inputStyle}
+                          placeholder="Phone"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <button style={mapBtnCompactStyle} onClick={handleUseCurrentLocation}>
-                    Use Current Location
-                  </button>
-                </div>
+                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "0.4rem", marginBottom: "0.4rem" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={inputWrapperFlex}>
+                        <input
+                          style={inputStyle}
+                          placeholder="Address"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={inputWrapperFlex}>
+                        <input
+                          style={inputStyle}
+                          placeholder="License Number"
+                          value={licenseNumber}
+                          onChange={(e) => setLicenseNumber(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Map */}
-                <MapContainer
-                  center={[location.lat, location.lng]}
-                  zoom={13}
-                  style={{ height: "130px", width: "100%", borderRadius: "6px", marginBottom: "0.4rem" }}
-                >
-                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  <LocationMarker />
-                  <MapController location={location} />
-                </MapContainer>
-                <p style={{ color: "#fff", fontSize: "0.75rem", marginTop: "0.2rem" }}>
-                  Click on map to select location
-                </p>
-              </>
-            )}
+                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "0.5rem", alignItems: "center", marginBottom: "0.4rem" }}>
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <label htmlFor="profilePic" style={uploadBtnCompactStyle}>
+                        {profilePic ? "Change Hospital Picture" : "Upload Hospital Picture"}
+                      </label>
+                      <input
+                        id="profilePic"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => setProfilePic(e.target.files[0])}
+                      />
+                      {profilePic && <div style={{ color: "#00626a", fontSize: "0.7rem", marginTop: "0.2rem" }}>{profilePic.name}</div>}
+                    </div>
+                    <button style={mapBtnCompactStyle} onClick={handleUseCurrentLocation}>
+                      Use Current Location
+                    </button>
+                  </div>
 
-            {/* Password */}
-            <div style={inputWrapper}>
-              <FaLock style={iconStyle} />
-              <input
-                style={inputStyle}
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+                  <MapContainer
+                    center={[location.lat, location.lng]}
+                    zoom={13}
+                    style={{ height: "130px", width: "100%", borderRadius: "6px", marginBottom: "0.4rem" }}
+                  >
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <LocationMarker />
+                    <MapController location={location} />
+                  </MapContainer>
+                  <p style={{ color: "#00626a", fontSize: "0.75rem", marginTop: "0.2rem" }}>
+                    Click on map to select location
+                  </p>
+                </>
+              )}
 
-            <button style={buttonStyle} onClick={handleRegister}>
-              Register
-            </button>
+              <div style={inputWrapper}>
+                <FaLock style={iconStyle} />
+                <input
+                  style={inputStyle}
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
 
-            <p style={{ color: "#fff", marginTop: "0.8rem" }}>
-              Already have an account?{" "}
-              <Link to="/login" style={{ color: "yellow" }}>
-                Login
-              </Link>
-            </p>
-          </>
-        ) : (
-          <>
-            <h2 style={titleStyle}>Verify OTP</h2>
-            <div style={inputWrapper}>
-              <input
-                style={inputStyle}
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-              />
-            </div>
-            <button style={buttonStyle} onClick={handleVerifyOtp}>
-              Verify OTP
-            </button>
-          </>
-        )}
+              <button style={buttonStyle} onClick={handleRegister}>
+                Register
+              </button>
+
+              <p style={{ color: "#1a1818ff", marginTop: "0.8rem" }}>
+                Already have an account?{" "}
+                <Link to="/login" style={{ color: "#00626a" }}>
+                  Login
+                </Link>
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 style={titleStyle}>Verify OTP</h2>
+              <div style={inputWrapper}>
+                <input
+                  style={inputStyle}
+                  placeholder="Enter OTP"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                />
+              </div>
+              <button style={buttonStyle} onClick={handleVerifyOtp}>
+                Verify OTP
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* RIGHT = WELCOME PANEL */}
+      <div
+        style={{
+          ...rightPanel,
+          width: isMobile ? "100%" : "50%",
+          padding: isMobile ? "2rem 1rem" : "3rem 2rem",
+        }}
+      >
+        <h1 style={leftTitle}>Join The Creative Community</h1>
+        <img
+          src="https://t3.ftcdn.net/jpg/08/60/01/22/360_F_860012214_XcDYSccoanH8aWgLnzITxSJokgYiiaTU.jpg"
+          alt="Register"
+          style={{ ...leftImage, width: isMobile ? "90%" : "70%" }}
+        />
+        <p style={{ ...leftText, maxWidth: isMobile ? "90%" : "350px" }}>
+          Sign up to streamline hospital operations, collaborate with your team, and improve patient care. Smooth workflows and intuitive design make managing everything effortless.
+        </p>
       </div>
     </div>
   );
 }
 
-// ---------------------- STYLES ----------------------
-const pageWrapper = {
-  minHeight: "100vh",
+// ----------------- STYLES -----------------
+const layoutWrapper = {
   display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundImage:
-    "url('https://images.unsplash.com/photo-1508780709619-79562169bc64?auto=format&fit=crop&w=1470&q=80')",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
+  width: "100%",
+  minHeight: "100vh",
   position: "relative",
 };
 
-const overlayStyle = {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  backgroundColor: "rgba(0,0,0,0.5)",
-  backdropFilter: "blur(5px)",
+const formSide = {
+  flex: 1,
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  position: "relative",
+};
+
+const rightPanel = {
+  flex: 1,
+  background: "linear-gradient(135deg, #00626a, #00838f)",
+  color: "white",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  textAlign: "center",
+};
+
+const leftTitle = {
+  fontSize: "2.2rem",
+  fontWeight: "bold",
+  marginBottom: "1rem",
+};
+
+const leftImage = {
+  maxWidth: "320px",
+  marginTop: "1rem",
+  borderRadius: "10px",
+};
+
+const leftText = {
+  fontSize: "1.1rem",
+  opacity: 0.9,
+  marginTop: "1rem",
 };
 
 const homeBtnStyle = {
-  position: "absolute",
-  top: "20px",
-  left: "20px",
   display: "flex",
   alignItems: "center",
   gap: "6px",
-  padding: "6px 10px",
+  padding: "6px 12px",
+  background: "#00626a",
+  color: "#fff",
   borderRadius: "6px",
-  backgroundColor: "#fff",
-  boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
   fontWeight: "bold",
-  color: "#333",
   textDecoration: "none",
+  boxShadow: "0 3px 10px rgba(0,0,0,0.15)",
 };
 
 const containerStyle = {
-  maxWidth: "520px",
-  padding: "1rem",
+  padding: "2rem",
   borderRadius: "10px",
-  boxShadow: "0px 6px 15px rgba(0,0,0,0.25)",
-  textAlign: "center",
-  backgroundColor: "rgba(255,255,255,0.1)",
+  backgroundColor: "#fff",
+  border: "1px solid #e5e5e5",
+  boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
   zIndex: 2,
+  textAlign: "center",
 };
 
-const titleStyle = { marginBottom: "0.8rem", color: "#fff" };
-const labelStyle = { color: "#fff", marginBottom: "0.6rem", display: "block" };
+const titleStyle = {
+  fontSize: "1.8rem",
+  fontWeight: "bold",
+  marginBottom: "1rem",
+  color: "#00626a",
+};
+
+const labelStyle = {
+  color: "#00626a",
+  fontWeight: "bold",
+  marginBottom: "0.7rem",
+  display: "block",
+};
 
 const inputWrapper = {
   display: "flex",
   alignItems: "center",
-  backgroundColor: "#f1f1f1",
-  borderRadius: "4px",
-  padding: "0.25rem 0.4rem",
-  marginBottom: "0.35rem",
+  border: "1px solid #ccc",
+  borderRadius: "8px",
+  padding: "0.6rem",
+  marginBottom: "0.6rem",
+  background: "#fff",
 };
 
 const inputWrapperFlex = {
   display: "flex",
   alignItems: "center",
   flex: 1,
-  backgroundColor: "#f1f1f1",
-  borderRadius: "4px",
-  padding: "0.25rem 0.4rem",
+  border: "1px solid #ccc",
+  borderRadius: "8px",
+  padding: "0.6rem",
+  background: "#fff",
 };
 
-const iconStyle = { marginRight: "6px", color: "#666" };
+const iconStyle = {
+  color: "#00626a",
+  marginRight: "8px",
+  fontSize: "1rem",
+};
 
 const inputStyle = {
   flex: 1,
-  padding: "0.35rem",
   border: "none",
   outline: "none",
-  fontSize: "0.85rem",
-  backgroundColor: "transparent",
+  fontSize: "1rem",
+  background: "transparent",
 };
 
 const buttonStyle = {
   width: "100%",
-  padding: "0.55rem",
-  marginTop: "0.5rem",
-  borderRadius: "4px",
+  padding: "0.7rem",
   border: "none",
-  backgroundColor: "#4CAF50",
+  backgroundColor: "#00626a",
   color: "white",
-  fontSize: "0.95rem",
+  borderRadius: "8px",
+  fontSize: "1rem",
+  fontWeight: "bold",
   cursor: "pointer",
-  transition: "all 0.2s ease",
+  marginTop: "0.7rem",
+  transition: "0.2s ease",
 };
 
 const uploadBtnCompactStyle = {
   display: "inline-block",
-  padding: "0.25rem 0.5rem",
-  backgroundColor: "#4CAF50",
+  padding: "0.4rem 0.7rem",
+  backgroundColor: "#00626a",
   color: "#fff",
-  borderRadius: "4px",
+  borderRadius: "6px",
   cursor: "pointer",
-  fontSize: "0.75rem",
+  fontSize: "0.8rem",
+  fontWeight: "bold",
 };
 
 const mapBtnCompactStyle = {
-  padding: "0.25rem 0.5rem",
-  fontSize: "0.75rem",
-  borderRadius: "4px",
-  border: "none",
-  backgroundColor: "#4CAF50",
+  padding: "0.4rem 0.8rem",
+  backgroundColor: "#00626a",
   color: "#fff",
+  border: "none",
+  borderRadius: "6px",
   cursor: "pointer",
+  fontSize: "0.8rem",
+  fontWeight: "bold",
 };

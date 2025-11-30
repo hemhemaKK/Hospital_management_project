@@ -103,7 +103,7 @@ export default function NurseDashboard() {
         value={selectedCategoryId}
         onChange={(e) => setSelectedCategoryId(e.target.value)}
       >
-        <option value="">Select Category</option>
+        <option value="">Select Department</option>
         {categories.map((c) => (
           <option key={c._id} value={c._id}>
             {c.name} ({c.hospitalName})
@@ -122,10 +122,11 @@ export default function NurseDashboard() {
   -------------------------------------------------------- */
   const renderDoctorInfo = () => (
     <div style={doctorBox}>
-      <h3>Assigned Doctor</h3>
+      <h3 style={{ color: "#00626aee", marginBottom: "15px" }}>Assigned Doctor</h3>
       <p><b>Name:</b> {assignedDoctor?.name}</p>
       <p><b>Email:</b> {assignedDoctor?.email}</p>
       <p><b>Phone:</b> {assignedDoctor?.phone || "-"}</p>
+      <p><b>Department:</b> {assignedDoctor?.selectedCategory?.name || "-"}</p>
     </div>
   );
 
@@ -137,12 +138,12 @@ export default function NurseDashboard() {
       {!user.selectedCategory ? (
         renderCategorySelection()
       ) : !user.isVerified ? (
-        <p style={{ color: "orange", marginTop: "20px" }}>
+        <p style={{ color: "#ff9800", marginTop: "20px", fontWeight: "bold" }}>
           Waiting for doctor approval...
         </p>
       ) : (
         <>
-          <h3 style={{ marginTop: "30px" }}>Your Assigned Doctor</h3>
+          <h3 style={{ marginTop: "30px", color: "#00626aee" }}>Your Assigned Doctor</h3>
           {assignedDoctor ? renderDoctorInfo() : <p>No doctor assigned yet.</p>}
         </>
       )}
@@ -163,7 +164,12 @@ export default function NurseDashboard() {
               style={profilePicStyle}
             />
             <h3 style={{ color: "#fff" }}>{user?.name}</h3>
-            <p style={{ color: "#aaa" }}>{user?.email}</p>
+            <p style={{ color: "#ccc" }}>{user?.email}</p>
+            {user?.selectedCategory && (
+              <p style={{ color: "#aaa", fontSize: "12px" }}>
+                Department: {user.selectedCategory.name}
+              </p>
+            )}
           </div>
 
           {["Dashboard", "My Doctor", "Profile"].map((menu) => (
@@ -178,40 +184,46 @@ export default function NurseDashboard() {
         </div>
 
         <div style={{ padding: "0.5rem" }}>
-          <div style={bottomLinkStyle(false, true)} onClick={handleLogout}>
+          <div style={bottomLinkStyle} onClick={handleLogout}>
             Logout
           </div>
         </div>
       </div>
 
       {/* ---------------- CONTENT ---------------- */}
-      <div style={{ flex: 1, marginLeft: "250px", padding: "2rem" }}>
+      <div style={contentAreaStyle}>
         {activeSection === "Dashboard" && renderDashboard()}
-        {activeSection === "My Doctor" && renderDoctorInfo()}
+        {activeSection === "My Doctor" && (
+          <div>
+            <h2 style={{ color: "#00626aee", marginBottom: "20px" }}>My Doctor</h2>
+            {assignedDoctor ? renderDoctorInfo() : <p>No doctor assigned yet.</p>}
+          </div>
+        )}
         {activeSection === "Profile" && <ProfileSettings />}
       </div>
     </div>
   );
 }
 
-/* ====================== CSS ====================== */
+/* ====================== STYLES ====================== */
 
 const sidebarStyle = {
   width: "250px",
-  background: "#111",
+  background: "#00626aee",
   height: "100vh",
   padding: "1rem",
   position: "fixed",
   display: "flex",
   flexDirection: "column",
   justifyContent: "space-between",
+  boxShadow: "2px 0 10px rgba(0,0,0,0.1)",
 };
 
 const profileStyle = {
   textAlign: "center",
   marginBottom: "20px",
-  borderBottom: "1px solid #444",
-  paddingBottom: "10px",
+  borderBottom: "1px solid rgba(255,255,255,0.2)",
+  paddingBottom: "15px",
 };
 
 const profilePicStyle = {
@@ -219,48 +231,70 @@ const profilePicStyle = {
   height: "80px",
   borderRadius: "50%",
   objectFit: "cover",
+  border: "3px solid #00838f",
 };
 
 const menuItemStyle = (active) => ({
-  padding: "10px",
-  margin: "8px 0",
-  borderRadius: "6px",
-  background: active ? "#333" : "transparent",
-  color: active ? "#4CAF50" : "#fff",
+  padding: "12px 15px",
+  margin: "6px 0",
+  borderRadius: "8px",
+  background: active ? "#00838f" : "transparent",
+  color: "#fff",
   cursor: "pointer",
+  fontWeight: "bold",
+  transition: "background-color 0.2s ease",
+  fontSize: "14px",
 });
 
-const bottomLinkStyle = (active, isLogout = false) => ({
-  padding: "10px",
+const bottomLinkStyle = {
+  padding: "12px 15px",
   borderRadius: "8px",
   textAlign: "center",
   color: "#fff",
   cursor: "pointer",
-  background: isLogout ? "#ff4d4d" : active ? "#222" : "transparent",
-});
+  background: "#d32f2f",
+  fontWeight: "bold",
+  transition: "background-color 0.2s ease",
+  fontSize: "14px",
+};
+
+const contentAreaStyle = {
+  flex: 1,
+  marginLeft: "250px",
+  padding: "2rem",
+  backgroundColor: "#f5f5f5",
+  minHeight: "100vh",
+};
 
 const selectStyle = {
-  padding: "8px",
+  padding: "10px 12px",
   marginRight: "10px",
   borderRadius: "6px",
+  border: "1px solid #ccc",
+  fontSize: "14px",
+  minWidth: "250px",
 };
 
 const chooseBtnStyle = {
-  padding: "8px 16px",
-  background: "#4CAF50",
+  padding: "10px 20px",
+  background: "#00838f",
   border: "none",
   color: "white",
   borderRadius: "6px",
   cursor: "pointer",
+  fontWeight: "bold",
+  fontSize: "14px",
+  transition: "background-color 0.2s ease",
 };
 
 const doctorBox = {
   background: "#fff",
-  padding: "20px",
+  padding: "25px",
   borderRadius: "10px",
-  width: "300px",
-  fontSize: "16px",
+  width: "350px",
+  fontSize: "15px",
   boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  borderLeft: "4px solid #00838f",
 };
 
 /* END */

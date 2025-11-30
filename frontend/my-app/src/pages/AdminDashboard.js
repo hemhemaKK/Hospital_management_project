@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import "./AdminDashboard.css";
 
 const BASE_URL = "http://localhost:5000";
 
@@ -10,6 +11,8 @@ export default function AdminDashboard() {
 
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [user, setUser] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   const [stats, setStats] = useState({ users: 0, doctors: 0, tickets: 0, Deparment: 0 });
 
@@ -31,6 +34,24 @@ export default function AdminDashboard() {
   const [ticketReplies, setTicketReplies] = useState({});
   // track which ticket reply box is open
   const [openReplyKey, setOpenReplyKey] = useState(null);
+
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setSidebarVisible(false);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
 
   // load logged in user from localStorage
   useEffect(() => {
@@ -82,7 +103,12 @@ export default function AdminDashboard() {
     fetchAllData();
   }, [token]);
 
-  const handleMenuClick = (menu) => setActiveSection(menu);
+  const handleMenuClick = (menu) => {
+    setActiveSection(menu);
+    if (isMobile) {
+      setSidebarVisible(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -90,101 +116,13 @@ export default function AdminDashboard() {
     navigate("/login");
   };
 
-  /* ---------------- STYLES (inline) ---------------- */
-  const sidebarStyle = {
-    width: "250px",
-    minHeight: "100vh",
-    backgroundColor: "#111",
-    padding: "0.5rem",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    position: "fixed",
-    left: 0,
-    top: 0,
+  const toggleSidebar = () => {
+    setSidebarVisible(!sidebarVisible);
   };
 
-  const profileStyle = {
-    padding: "0.5rem",
-    borderBottom: "1px solid #444",
-    textAlign: "center",
-    color: "#fff",
+  const closeSidebar = () => {
+    setSidebarVisible(false);
   };
-
-  const profilePicStyle = {
-    borderRadius: "50%",
-    marginBottom: "0.2rem",
-    width: "80px",
-    height: "80px",
-    objectFit: "cover",
-  };
-
-  const menuItemStyle = (isActive) => ({
-    textDecoration: "none",
-    color: isActive ? "#4CAF50" : "#fff",
-    padding: "0.8rem 1rem",
-    display: "block",
-    borderRadius: "8px",
-    margin: "0.4rem 0",
-    cursor: "pointer",
-    fontWeight: "bold",
-    backgroundColor: isActive ? "#222" : "transparent",
-  });
-
-  const bottomLinkStyle = (isActive, isLogout = false) => ({
-    textDecoration: "none",
-    color: "#fff",
-    padding: "0.8rem 1rem",
-    display: "block",
-    borderRadius: "8px",
-    margin: "0.4rem 0",
-    cursor: "pointer",
-    fontWeight: "bold",
-    backgroundColor: isLogout ? "#ff4d4d" : isActive ? "#222" : "transparent",
-    textAlign: "center",
-  });
-
-  const cardStyle = {
-    backgroundColor: "#fff",
-    flex: "1 1 200px",
-    padding: "20px",
-    borderRadius: "10px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-    textAlign: "center",
-    fontWeight: "bold",
-    fontSize: "18px",
-  };
-
-  const tableStyle = {
-    width: "100%",
-    borderCollapse: "separate",
-    borderSpacing: 0,
-    marginTop: "10px",
-    backgroundColor: "#fff",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-    borderRadius: "10px",
-    overflow: "hidden",
-    fontSize: "0.95rem",
-    color: "#333",
-  };
-
-  const thStyle = {
-    backgroundColor: "#020202ff",
-    color: "#fff",
-    textAlign: "left",
-    padding: "12px 15px",
-    fontWeight: "bold",
-  };
-
-  const tdStyle = {
-    padding: "12px 15px",
-    borderBottom: "1px solid #eee",
-    verticalAlign: "top",
-  };
-
-  const trStyle = (idx) => ({
-    backgroundColor: idx % 2 === 0 ? "#f9f9f9" : "#fff",
-  });
 
   /* ---------------- DOCTORS TABLE ACTIONS ---------------- */
   const approveDoctor = async (id) => {
@@ -259,15 +197,7 @@ export default function AdminDashboard() {
     }
   };
 
-  /* ---------------- TICKETS: REPLY & CLOSE ----------------
-      We'll assume API: PUT /api/admin/tickets/reply
-      Body: { userId, ticketId, reply }
-      Backend should:
-        - find user by userId
-        - find ticket by ticketId in user.supportTickets
-        - set ticket.reply, ticket.status = 'closed', ticket.replyAt = Date.now()
-      Response: updated ticket or success message
-  ----------------------------------------------------- */
+  /* ---------------- TICKETS: REPLY & CLOSE ---------------- */
   const toggleReplyBox = (userId, ticketId) => {
     const key = `${userId}_${ticketId}`;
     setOpenReplyKey((prev) => (prev === key ? null : key));
@@ -338,19 +268,19 @@ export default function AdminDashboard() {
 
     return (
       <div>
-        <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+        <div className="flex-container">
           <input
             type="text"
             placeholder="Search by name/email"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid #ccc", flex: 1 }}
+            className="input-field"
           />
 
           <select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
-            style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid #ccc" }}
+            className="select-field"
           >
             <option value="">All Roles</option>
             <option value="user">User</option>
@@ -360,349 +290,304 @@ export default function AdminDashboard() {
           </select>
         </div>
 
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Name</th>
-              <th style={thStyle}>Email</th>
-              <th style={thStyle}>Role</th>
-              <th style={thStyle}>Phone</th>
-              <th style={thStyle}>Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filteredUsers.map((u, idx) => (
-              <tr key={u._id} style={trStyle(idx)}>
-                <td style={tdStyle}>{u.name}</td>
-                <td style={tdStyle}>{u.email}</td>
-                <td style={tdStyle}>{u.role}</td>
-                <td style={tdStyle}>{u.phone || "-"}</td>
-                <td style={tdStyle}>
-                  <button
-                    onClick={() => deleteUserFn(u._id)}
-                    style={{
-                      padding: "6px 10px",
-                      backgroundColor: "#f44336",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "5px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Delete
-                  </button>
-                </td>
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Phone</th>
+                <th>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {filteredUsers.map((u, idx) => (
+                <tr key={u._id}>
+                  <td>{u.name}</td>
+                  <td>{u.email}</td>
+                  <td>{u.role}</td>
+                  <td>{u.phone || "-"}</td>
+                  <td>
+                    <div className={isMobile ? "mobile-actions" : ""}>
+                      <button
+                        onClick={() => deleteUserFn(u._id)}
+                        className="btn btn-danger"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   };
-const [doctorStatusFilter, setDoctorStatusFilter] = useState("");
-const [ticketStatusFilter, setTicketStatusFilter] = useState("");
-const [ticketSearch, setTicketSearch] = useState("");
+
+  const [doctorStatusFilter, setDoctorStatusFilter] = useState("");
+  const [ticketStatusFilter, setTicketStatusFilter] = useState("");
+  const [ticketSearch, setTicketSearch] = useState("");
 
   /* ---------------- RENDER: DOCTORS TABLE ---------------- */
   const renderDoctorsTable = () => {
-  const search = searchTerm.toLowerCase();
+    const search = searchTerm.toLowerCase();
 
-  const filteredDoctors = doctors.filter((d) => {
-    const name = (d.name || "").toLowerCase();
-    const email = (d.email || "").toLowerCase();
-    const categoryName = (d.selectedCategory?.name || "").toLowerCase();
-    const status = d.isVerified ? "approved" : "pending";
+    const filteredDoctors = doctors.filter((d) => {
+      const name = (d.name || "").toLowerCase();
+      const email = (d.email || "").toLowerCase();
+      const categoryName = (d.selectedCategory?.name || "").toLowerCase();
+      const status = d.isVerified ? "approved" : "pending";
 
-    const matchesSearch =
-      name.includes(search) ||
-      email.includes(search) ||
-      categoryName.includes(search);
+      const matchesSearch =
+        name.includes(search) ||
+        email.includes(search) ||
+        categoryName.includes(search);
 
-    const matchesCategory = filterCategory
-      ? categoryName === filterCategory.toLowerCase()
-      : true;
-
-    const matchesStatus =
-      doctorStatusFilter
-        ? status === doctorStatusFilter.toLowerCase()
+      const matchesCategory = filterCategory
+        ? categoryName === filterCategory.toLowerCase()
         : true;
 
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+      const matchesStatus =
+        doctorStatusFilter
+          ? status === doctorStatusFilter.toLowerCase()
+          : true;
 
-  return (
-    <div>
-      {/* SEARCH + FILTER BAR */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-        <input
-          type="text"
-          placeholder="Search by name/email/category"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            padding: "6px 10px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            flex: 2,
-          }}
-        />
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
 
-        <select
-          value={doctorStatusFilter}
-          onChange={(e) => setDoctorStatusFilter(e.target.value)}
-          style={{
-            padding: "6px 10px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            flex: 1,
-          }}
-        >
-          <option value="">All Status</option>
-          <option value="approved">Approved</option>
-          <option value="pending">Pending</option>
-        </select>
-      </div>
+    return (
+      <div>
+        {/* SEARCH + FILTER BAR */}
+        <div className="flex-container">
+          <input
+            type="text"
+            placeholder="Search by name/email/category"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input-field"
+          />
 
-      {/* DOCTOR TABLE */}
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Name</th>
-            <th style={thStyle}>Email</th>
-            <th style={thStyle}>Category</th>
-            <th style={thStyle}>Status</th>
-            <th style={thStyle}>Actions</th>
-          </tr>
-        </thead>
+          <select
+            value={doctorStatusFilter}
+            onChange={(e) => setDoctorStatusFilter(e.target.value)}
+            className="select-field"
+          >
+            <option value="">All Status</option>
+            <option value="approved">Approved</option>
+            <option value="pending">Pending</option>
+          </select>
+        </div>
 
-        <tbody>
-          {filteredDoctors.map((d, idx) => (
-            <tr key={d._id} style={trStyle(idx)}>
-              <td style={tdStyle}>{d.name}</td>
-              <td style={tdStyle}>{d.email}</td>
-              <td style={tdStyle}>{d.selectedCategory?.name || "-"}</td>
+        {/* DOCTOR TABLE */}
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
 
-              <td style={tdStyle}>
-                {d.isApproved ? (
-                  <span style={{ color: "green", fontWeight: "bold" }}>Approved</span>
-                ) : (
-                  <span style={{ color: "red", fontWeight: "bold" }}>Pending</span>
-                )}
-              </td>
+            <tbody>
+              {filteredDoctors.map((d, idx) => (
+                <tr key={d._id}>
+                  <td>{d.name}</td>
+                  <td>{d.email}</td>
+                  <td>{d.selectedCategory?.name || "-"}</td>
 
-              <td style={tdStyle}>
-                <button
-                  onClick={() => approveDoctor(d._id)}
-                  disabled={d.isApproved}
-                  style={{
-                    padding: "6px 10px",
-                    backgroundColor: d.isverified ? "#ccc" : "#4CAF50",
-                    color: "#fff",
-                    border: "none",
-                    marginRight: "5px",
-                    borderRadius: "5px",
-                  }}
-                >
-                  {d.isApproved ? "Approved" : "Approve"}
-                </button>
-
-                <button
-                  onClick={() => toggleDoctor(d._id)}
-                  style={{
-                    padding: "6px 10px",
-                    backgroundColor: d.isVerified ? "#ff9800" : "#4CAF50",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "5px",
-                    marginRight: "5px",
-                  }}
-                >
-                  {d.isApproved ? "Block" : "Unblock"}
-                </button>
-
-                <button
-                  onClick={() => deleteDoctor(d._id)}
-                  style={{
-                    padding: "6px 10px",
-                    backgroundColor: "#f44336",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "5px",
-                  }}
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-  /* ---------------- RENDER: TICKETS TABLE (with reply) ---------------- */
-  const renderTicketsTable = () => {
-  const allTickets = users.flatMap((u) =>
-    (u.supportTickets || []).map((t) => ({
-      ...t,
-      userId: u._id,
-      userName: u.name,
-      userEmail: u.email,
-    }))
-  );
-
-  const search = ticketSearch.toLowerCase();
-
-  const filteredTickets = allTickets.filter((t) => {
-    const subject = (t.subject || "").toLowerCase();
-    const user = (t.userName || "").toLowerCase();
-    const email = (t.userEmail || "").toLowerCase();
-    const status = (t.status || "").toLowerCase();
-
-    const matchesSearch =
-      subject.includes(search) ||
-      user.includes(search) ||
-      email.includes(search);
-
-    const matchesStatus = ticketStatusFilter
-      ? status === ticketStatusFilter.toLowerCase()
-      : true;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  return (
-    <div>
-      {/* SEARCH + FILTER BAR */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-        <input
-          type="text"
-          placeholder="Search tickets (subject/user/email)"
-          value={ticketSearch}
-          onChange={(e) => setTicketSearch(e.target.value)}
-          style={{
-            padding: "6px 10px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            flex: 2,
-          }}
-        />
-
-        <select
-          value={ticketStatusFilter}
-          onChange={(e) => setTicketStatusFilter(e.target.value)}
-          style={{
-            padding: "6px 10px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            flex: 1,
-          }}
-        >
-          <option value="">All Status</option>
-          <option value="open">Open</option>
-          <option value="closed">Closed</option>
-        </select>
-      </div>
-
-      {/* TICKET TABLE */}
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            <th style={thStyle}>User</th>
-            <th style={thStyle}>Subject</th>
-            <th style={thStyle}>Status</th>
-            <th style={thStyle}>Reply</th>
-            <th style={thStyle}>Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredTickets.map((t, idx) => {
-            const key = `${t.userId}_${t._id}`;
-            const isOpen = openReplyKey === key;
-
-            return (
-              <React.Fragment key={key}>
-                <tr style={trStyle(idx)}>
-                  <td style={tdStyle}>
-                    <b>{t.userName}</b>
-                    <div style={{ fontSize: "12px", color: "#555" }}>
-                      {t.userEmail}
-                    </div>
-                  </td>
-
-                  <td style={tdStyle}>{t.subject}</td>
-                  <td style={tdStyle}>{t.status}</td>
-
-                  <td style={tdStyle}>
-                    {t.reply ? (
-                      <div>{t.reply}</div>
+                  {/* FIXED STATUS */}
+                  <td>
+                    {d.isVerified ? (
+                      <span className="status-approved">
+                        Approved
+                      </span>
                     ) : (
-                      <span style={{ color: "#777" }}>No reply</span>
+                      <span className="status-pending">
+                        Pending
+                      </span>
                     )}
                   </td>
 
-                  <td style={tdStyle}>
-                    <button
-                      onClick={() => toggleReplyBox(t.userId, t._id)}
-                      style={{
-                        padding: "6px 10px",
-                        backgroundColor: "#4CAF50",
-                        color: "#fff",
-                        borderRadius: "6px",
-                        border: "none",
-                      }}
-                    >
-                      {isOpen ? "Close" : "Reply"}
-                    </button>
+                  <td>
+                    <div className={isMobile ? "mobile-actions" : ""}>
+                      {/* FIXED APPROVE BUTTON */}
+                      <button
+                        onClick={() => approveDoctor(d._id)}
+                        disabled={d.isVerified}
+                        className="btn btn-primary"
+                      >
+                        {d.isVerified ? "Approved" : "Approve"}
+                      </button>
+
+                      {/* FIXED BLOCK/UNBLOCK BUTTON */}
+                      <button
+                        onClick={() => toggleDoctor(d._id)}
+                        className="btn btn-warning"
+                      >
+                        {d.isVerified ? "Block" : "Unblock"}
+                      </button>
+
+                      {/* DELETE DOCTOR */}
+                      <button
+                        onClick={() => deleteDoctor(d._id)}
+                        className="btn btn-danger"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
-                {isOpen && (
-                  <tr>
-                    <td colSpan={5} style={{ padding: "10px", background: "#fafafa" }}>
-                      <textarea
-                        rows="3"
-                        value={ticketReplies[key] || ""}
-                        onChange={(e) =>
-                          setReplyText(t.userId, t._id, e.target.value)
-                        }
-                        placeholder="Type reply..."
-                        style={{
-                          width: "100%",
-                          padding: "10px",
-                          borderRadius: "6px",
-                          border: "1px solid #ccc",
-                        }}
-                      ></textarea>
+  /* ---------------- RENDER: TICKETS TABLE (with reply) ---------------- */
+  const renderTicketsTable = () => {
+    const allTickets = users.flatMap((u) =>
+      (u.supportTickets || []).map((t) => ({
+        ...t,
+        userId: u._id,
+        userName: u.name,
+        userEmail: u.email,
+      }))
+    );
 
-                      <div style={{ marginTop: "8px", textAlign: "right" }}>
+    const search = ticketSearch.toLowerCase();
+
+    const filteredTickets = allTickets.filter((t) => {
+      const subject = (t.subject || "").toLowerCase();
+      const user = (t.userName || "").toLowerCase();
+      const email = (t.userEmail || "").toLowerCase();
+      const status = (t.status || "").toLowerCase();
+
+      const matchesSearch =
+        subject.includes(search) ||
+        user.includes(search) ||
+        email.includes(search);
+
+      const matchesStatus = ticketStatusFilter
+        ? status === ticketStatusFilter.toLowerCase()
+        : true;
+
+      return matchesSearch && matchesStatus;
+    });
+
+    return (
+      <div>
+        {/* SEARCH + FILTER BAR */}
+        <div className="flex-container">
+          <input
+            type="text"
+            placeholder="Search tickets (subject/user/email)"
+            value={ticketSearch}
+            onChange={(e) => setTicketSearch(e.target.value)}
+            className="input-field"
+          />
+
+          <select
+            value={ticketStatusFilter}
+            onChange={(e) => setTicketStatusFilter(e.target.value)}
+            className="select-field"
+          >
+            <option value="">All Status</option>
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+
+        {/* TICKET TABLE */}
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th>Reply</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredTickets.map((t, idx) => {
+                const key = `${t.userId}_${t._id}`;
+                const isOpen = openReplyKey === key;
+
+                return (
+                  <React.Fragment key={key}>
+                    <tr>
+                      <td>
+                        <b>{t.userName}</b>
+                        <div className="user-info">
+                          {t.userEmail}
+                        </div>
+                      </td>
+
+                      <td>{t.subject}</td>
+                      <td>{t.status}</td>
+
+                      <td>
+                        {t.reply ? (
+                          <div>{t.reply}</div>
+                        ) : (
+                          <span style={{ color: "#777" }}>No reply</span>
+                        )}
+                      </td>
+
+                      <td>
                         <button
-                          onClick={() => sendReply(t.userId, t._id)}
-                          style={{
-                            padding: "8px 12px",
-                            backgroundColor: "#4CAF50",
-                            color: "#fff",
-                            borderRadius: "6px",
-                            border: "none",
-                          }}
+                          onClick={() => toggleReplyBox(t.userId, t._id)}
+                          className="btn btn-primary"
                         >
-                          Send Reply & Close
+                          {isOpen ? "Close" : "Reply"}
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+                      </td>
+                    </tr>
+
+                    {isOpen && (
+                      <tr>
+                        <td colSpan={5} style={{ padding: "10px", background: "#fafafa" }}>
+                          <textarea
+                            rows="3"
+                            value={ticketReplies[key] || ""}
+                            onChange={(e) =>
+                              setReplyText(t.userId, t._id, e.target.value)
+                            }
+                            placeholder="Type reply..."
+                            className="textarea-field"
+                          ></textarea>
+
+                          <div style={{ marginTop: "8px", textAlign: "right" }}>
+                            <button
+                              onClick={() => sendReply(t.userId, t._id)}
+                              className="btn btn-primary"
+                            >
+                              Send Reply & Close
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
   /* ---------------- RENDER: Deparment ---------------- */
   
@@ -710,307 +595,268 @@ const [ticketSearch, setTicketSearch] = useState("");
   const [editForm, setEditForm] = useState({ name: "", description: "" });
 
   const renderDeparment = () => {
-  const startEdit = (cat, safeId) => {
-    setEditingId(safeId);
-    setEditForm({
-      name: cat?.name || "",
-      description: cat?.description || ""
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditForm({ name: "", description: "" });
-  };
-
-  const saveEdit = async () => {
-    if (!editForm.name.trim()) return alert("Name required");
-
-    try {
-      const res = await axios.put(
-        `${BASE_URL}/api/admin/category/${editingId}`,  // safeId used
-        editForm,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      const updated = res.data.category;
-
-      setDeparment((prev) =>
-        prev.map((c) =>
-          (c._id || c.name) === editingId ? updated : c
-        )
-      );
-
-      cancelEdit();
-    } catch (err) {
-      console.error("update category error:", err);
-      alert("Failed to update category");
-    }
-  };
-
-  const deleteCategory = async (id) => {
-    if (!window.confirm("Delete this category?")) return;
-
-    try {
-      await axios.delete(`${BASE_URL}/api/admin/category/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+    const startEdit = (cat, safeId) => {
+      setEditingId(safeId);
+      setEditForm({
+        name: cat?.name || "",
+        description: cat?.description || ""
       });
+    };
 
-      setDeparment((prev) =>
-        prev.filter((c) => (c._id || c.name) !== id)
-      );
-    } catch (err) {
-      console.error("delete category error:", err);
-      alert("Failed to delete category");
-    }
-  };
+    const cancelEdit = () => {
+      setEditingId(null);
+      setEditForm({ name: "", description: "" });
+    };
 
-  // SAFE FILTERING
-  const uniqueCategoryNames = [
-    ...new Set((Deparment || []).map((x) => x?.name || ""))
-  ];
+    const saveEdit = async () => {
+      if (!editForm.name.trim()) return alert("Name required");
 
-  const filteredDeparment = (Deparment || []).filter((c) => {
-    const name = c?.name || "";
-    const desc = c?.description || "";
-    const search = categorySearch.toLowerCase();
-
-    const matchesSearch =
-      name.toLowerCase().includes(search) ||
-      desc.toLowerCase().includes(search);
-
-    const matchesFilter = categoryFilter ? name === categoryFilter : true;
-
-    return matchesSearch && matchesFilter;
-  });
-
-  return (
-    <div>
-      <h2 style={{ marginBottom: "15px" }}>Deparment</h2>
-
-      {/* ADD SECTION */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-        <input
-          type="text"
-          placeholder="Name"
-          value={categoryForm.name}
-          onChange={(e) =>
-            setCategoryForm({ ...categoryForm, name: e.target.value })
+      try {
+        const res = await axios.put(
+          `${BASE_URL}/api/admin/category/${editingId}`,  // safeId used
+          editForm,
+          {
+            headers: { Authorization: `Bearer ${token}` },
           }
-          style={{
-            padding: "6px 10px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            flex: 1,
-          }}
-        />
+        );
 
-        <input
-          type="text"
-          placeholder="Description"
-          value={categoryForm.description}
-          onChange={(e) =>
-            setCategoryForm({
-              ...categoryForm,
-              description: e.target.value,
-            })
-          }
-          style={{
-            padding: "6px 10px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            flex: 2,
-          }}
-        />
+        const updated = res.data.category;
 
-        <button
-          onClick={addCategory}
-          style={{
-            padding: "6px 12px",
-            backgroundColor: "#4CAF50",
-            color: "#fff",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-        >
-          Add
-        </button>
-      </div>
+        setDeparment((prev) =>
+          prev.map((c) =>
+            (c._id || c.name) === editingId ? updated : c
+          )
+        );
 
-      {/* SEARCH + FILTER */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-        <input
-          type="text"
-          placeholder="Search..."
-          value={categorySearch}
-          onChange={(e) => setCategorySearch(e.target.value)}
-          style={{
-            padding: "6px 10px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            flex: 2,
-          }}
-        />
+        cancelEdit();
+      } catch (err) {
+        console.error("update category error:", err);
+        alert("Failed to update category");
+      }
+    };
 
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          style={{
-            padding: "6px 10px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            flex: 1,
-          }}
-        >
-          <option value="">All</option>
-          {uniqueCategoryNames.map((name, i) => (
-            <option key={i} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </div>
+    const deleteCategory = async (id) => {
+      if (!window.confirm("Delete this category?")) return;
 
-      {/* CATEGORY TABLE */}
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Name</th>
-            <th style={thStyle}>Description</th>
-            <th style={thStyle}>Actions</th>
-          </tr>
-        </thead>
+      try {
+        await axios.delete(`${BASE_URL}/api/admin/category/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-        <tbody>
-          {filteredDeparment.map((c, idx) => {
-            const safeId = c._id || c.name || idx;
-            const isEditing = editingId === safeId;
+        setDeparment((prev) =>
+          prev.filter((c) => (c._id || c.name) !== id)
+        );
+      } catch (err) {
+        console.error("delete category error:", err);
+        alert("Failed to delete category");
+      }
+    };
 
-            return (
-              <tr key={safeId} style={trStyle(idx)}>
-                <td style={tdStyle}>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editForm.name}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, name: e.target.value })
-                      }
-                      style={{
-                        padding: "6px",
-                        width: "100%",
-                        borderRadius: "6px",
-                        border: "1px solid #ccc",
-                      }}
-                    />
-                  ) : (
-                    c?.name || "-"
-                  )}
-                </td>
+    // SAFE FILTERING
+    const uniqueCategoryNames = [
+      ...new Set((Deparment || []).map((x) => x?.name || ""))
+    ];
 
-                <td style={tdStyle}>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editForm.description}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          description: e.target.value,
-                        })
-                      }
-                      style={{
-                        padding: "6px",
-                        width: "100%",
-                        borderRadius: "6px",
-                        border: "1px solid #ccc",
-                      }}
-                    />
-                  ) : (
-                    c?.description || "-"
-                  )}
-                </td>
+    const filteredDeparment = (Deparment || []).filter((c) => {
+      const name = c?.name || "";
+      const desc = c?.description || "";
+      const search = categorySearch.toLowerCase();
 
-                <td style={tdStyle}>
-                  {isEditing ? (
-                    <>
-                      <button
-                        onClick={saveEdit}
-                        style={{
-                          padding: "6px 10px",
-                          backgroundColor: "#4CAF50",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: "6px",
-                          marginRight: "6px",
-                        }}
-                      >
-                        Save
-                      </button>
+      const matchesSearch =
+        name.toLowerCase().includes(search) ||
+        desc.toLowerCase().includes(search);
 
-                      <button
-                        onClick={cancelEdit}
-                        style={{
-                          padding: "6px 10px",
-                          backgroundColor: "#888",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: "6px",
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => startEdit(c, safeId)}
-                        style={{
-                          padding: "6px 10px",
-                          backgroundColor: "#2196F3",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: "6px",
-                          marginRight: "6px",
-                        }}
-                      >
-                        Edit
-                      </button>
+      const matchesFilter = categoryFilter ? name === categoryFilter : true;
 
-                      <button
-                        onClick={() => deleteCategory(safeId)}
-                        style={{
-                          padding: "6px 10px",
-                          backgroundColor: "#f44336",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: "6px",
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </>
-                  )}
-                </td>
+      return matchesSearch && matchesFilter;
+    });
+
+    return (
+      <div>
+        <h2 style={{ marginBottom: "15px" }}>Deparment</h2>
+
+        {/* ADD SECTION */}
+        <div className="flex-container">
+          <input
+            type="text"
+            placeholder="Name"
+            value={categoryForm.name}
+            onChange={(e) =>
+              setCategoryForm({ ...categoryForm, name: e.target.value })
+            }
+            className="input-field"
+          />
+
+          <input
+            type="text"
+            placeholder="Description"
+            value={categoryForm.description}
+            onChange={(e) =>
+              setCategoryForm({
+                ...categoryForm,
+                description: e.target.value,
+              })
+            }
+            className="input-field"
+          />
+
+          <button
+            onClick={addCategory}
+            className="btn btn-primary"
+          >
+            Add
+          </button>
+        </div>
+
+        {/* SEARCH + FILTER */}
+        <div className="flex-container">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={categorySearch}
+            onChange={(e) => setCategorySearch(e.target.value)}
+            className="input-field"
+          />
+
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="select-field"
+          >
+            <option value="">All</option>
+            {uniqueCategoryNames.map((name, i) => (
+              <option key={i} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* CATEGORY TABLE */}
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Actions</th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+            </thead>
+
+            <tbody>
+              {filteredDeparment.map((c, idx) => {
+                const safeId = c._id || c.name || idx;
+                const isEditing = editingId === safeId;
+
+                return (
+                  <tr key={safeId}>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editForm.name}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, name: e.target.value })
+                          }
+                          className="input-field"
+                          style={{ width: "100%" }}
+                        />
+                      ) : (
+                        c?.name || "-"
+                      )}
+                    </td>
+
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editForm.description}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              description: e.target.value,
+                            })
+                          }
+                          className="input-field"
+                          style={{ width: "100%" }}
+                        />
+                      ) : (
+                        c?.description || "-"
+                      )}
+                    </td>
+
+                    <td>
+                      <div className={isMobile ? "mobile-actions" : ""}>
+                        {isEditing ? (
+                          <>
+                            <button
+                              onClick={saveEdit}
+                              className="btn btn-primary"
+                            >
+                              Save
+                            </button>
+
+                            <button
+                              onClick={cancelEdit}
+                              className="btn btn-secondary"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => startEdit(c, safeId)}
+                              className="btn btn-info"
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              onClick={() => deleteCategory(safeId)}
+                              className="btn btn-danger"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div style={{ display: "flex" }}>
+      {/* Mobile Hamburger Menu */}
+      <button 
+        className={`hamburger-menu ${sidebarVisible ? 'active' : ''}`}
+        onClick={toggleSidebar}
+      >
+        <span className="hamburger-line"></span>
+        <span className="hamburger-line"></span>
+        <span className="hamburger-line"></span>
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobile && (
+        <div 
+          className={`mobile-overlay ${sidebarVisible ? 'visible' : ''}`}
+          onClick={closeSidebar}
+        />
+      )}
+
       {/* SIDEBAR */}
-      <div style={sidebarStyle}>
+      <div className={`sidebar ${isMobile ? (sidebarVisible ? 'mobile-visible' : 'mobile-hidden') : ''}`}>
         <div>
-          <div style={profileStyle}>
-            {user?.profilePic && <img src={user.profilePic} alt="Profile" style={profilePicStyle} />}
+          <div className="profile-section">
+            {user?.profilePic && <img src={user.profilePic} alt="Profile" className="profile-pic" />}
 
             <p style={{ fontWeight: "bold", fontSize: "16px" }}>{user?.name || "Admin"}</p>
             <p style={{ fontSize: "13px", color: "#ccc" }}>Role: {user?.role}</p>
@@ -1018,28 +864,32 @@ const [ticketSearch, setTicketSearch] = useState("");
           </div>
 
           {["Dashboard", "Users", "Doctors", "Tickets", "Deparment"].map((section) => (
-            <div key={section} style={menuItemStyle(activeSection === section)} onClick={() => handleMenuClick(section)}>
+            <div 
+              key={section} 
+              className={`menu-item ${activeSection === section ? 'active' : ''}`} 
+              onClick={() => handleMenuClick(section)}
+            >
               {section}
             </div>
           ))}
         </div>
 
         <div style={{ padding: "0.5rem" }}>
-          <div style={bottomLinkStyle(false, true)} onClick={handleLogout}>
+          <div className="bottom-link logout" onClick={handleLogout}>
             Logout
           </div>
         </div>
       </div>
 
       {/* CONTENT */}
-      <div style={{ marginLeft: "260px", padding: "50px", flex: 1 }}>
+      <div className={`content-area ${isMobile ? 'mobile-full' : ''}`}>
         {activeSection === "Dashboard" && (
           <div>
-            <div style={{ display: "flex", gap: "20px", marginBottom: "30px", flexWrap: "wrap" }}>
-              <div style={cardStyle}>Users: {stats.users}</div>
-              <div style={cardStyle}>Doctors: {stats.doctors}</div>
-              <div style={cardStyle}>Tickets: {stats.tickets}</div>
-              <div style={cardStyle}>Deparment: {stats.Deparment}</div>
+            <div className="flex-wrap">
+              <div className="card">Users: {stats.users}</div>
+              <div className="card">Doctors: {stats.doctors}</div>
+              <div className="card">Tickets: {stats.tickets}</div>
+              <div className="card">Deparment: {stats.Deparment}</div>
             </div>
 
             <h2>Recent Tickets</h2>
