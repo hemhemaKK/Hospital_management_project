@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { login } from "../services/auth";
 import { useNavigate, Link } from "react-router-dom";
 import { FaEnvelope, FaLock, FaHome, FaEye, FaEyeSlash } from "react-icons/fa";
@@ -7,9 +7,18 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   const navigate = useNavigate();
   const apiUrl = process.env.REACT_APP_API_URL;
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth <= 768;
 
   const handleGoogleAuth = () => {
     if (!apiUrl) return console.error("REACT_APP_API_URL is undefined!");
@@ -39,170 +48,263 @@ export default function Login() {
   };
 
   return (
-    <div style={pageWrapper}>
-      <div style={overlayStyle}></div>
+    <div
+      style={{
+        ...layoutWrapper,
+        flexDirection: isMobile ? "column" : "row",
+      }}
+    >
+      {/* LEFT PANEL */}
+      <div
+        style={{
+          ...leftPanel,
+          width: isMobile ? "100%" : "50%",
+          padding: isMobile ? "2rem 1rem" : "3rem 2rem",
+        }}
+      >
+        <h1 style={leftTitle}>HOSPITAL MANAGEMENT SYSTEM</h1>
 
-      <Link to="/" style={homeBtnStyle}>
-        <FaHome size={20} /> Home
-      </Link>
+        <img
+          src="https://alliedsoftech89.wordpress.com/wp-content/uploads/2013/06/medical-doctor-jobs-in-china-expat-jobs-in-china.jpg"
+          alt="Login"
+          style={{ ...leftImage, width: isMobile ? "90%" : "70%" }}
+        />
 
-      <div style={containerStyle}>
-        <h2 style={titleStyle}>Login</h2>
-
-        {/* Email */}
-        <div style={inputWrapper}>
-          <FaEnvelope style={iconStyle} />
-          <input
-            style={inputStyle}
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-
-        {/* Password */}
-        <div style={inputWrapper}>
-          <FaLock style={iconStyle} />
-          <input
-            style={inputStyle}
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <span
-            onClick={() => setShowPassword(!showPassword)}
-            style={{ cursor: "pointer", color: "#666", marginLeft: "6px" }}
-          >
-            {showPassword ? <FaEyeSlash /> : <FaEye />}
-          </span>
-        </div>
-
-        {/* Forgot Password Link */}
-        <p style={{ textAlign: "right", margin: "0.3rem 0", fontSize: "0.85rem" }}>
-          <Link to="/forgot-password" style={{ color: "#4CAF50" }}>
-            Forgot Password?
-          </Link>
+        <p style={{ ...leftText, maxWidth: isMobile ? "90%" : "350px" }}>
+          A comprehensive solution for efficient hospital operations and improved patient care.
         </p>
+      </div>
 
-        <button style={buttonStyle} onClick={handleLogin}>
-          Login
-        </button>
+      {/* RIGHT SIDE LOGIN PAGE */}
+      <div
+        style={{
+          ...pageWrapper,
+          width: isMobile ? "100%" : "50%",
+          padding: isMobile ? "0.5rem" : "20px", // Reduced only on mobile
+          paddingTop: isMobile ? "2rem" : "20px", // Reduced only on mobile
+          alignItems: isMobile ? "flex-start" : "center", // Changed only on mobile
+        }}
+      >
+        <Link to="/" style={{
+          ...homeBtn,
+          position: "absolute",
+          top: isMobile ? "10px" : "20px", // Closer to top only on mobile
+          left: isMobile ? "10px" : "20px",
+          zIndex: 1000,
+          padding: isMobile ? "5px 10px" : "6px 12px", // Smaller only on mobile
+        }}>
+          <FaHome size={isMobile ? 16 : 20} /> Home
+        </Link>
 
-        {/* Google Login */}
-        <button style={googleBtnStyle} onClick={handleGoogleAuth}>
-          Login with Google
-        </button>
+        <div
+          style={{
+            ...card,
+            width: isMobile ? "95%" : "380px", // Wider only on mobile
+            padding: isMobile ? "1.2rem" : "2rem", // Reduced only on mobile
+            marginTop: isMobile ? "0.5rem" : "0", // Reduced only on mobile
+          }}
+        >
+          <h2 style={title}>Login</h2>
 
-        <p style={textStyle}>
-          New User?{" "}
-          <Link to="/register" style={{ color: "#4CAF50" }}>
-            Register
-          </Link>
-        </p>
+          {/* Email */}
+          <div style={inputBox}>
+            <FaEnvelope style={inputIcon} />
+            <input
+              style={input}
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          {/* Password */}
+          <div style={inputBox}>
+            <FaLock style={inputIcon} />
+            <input
+              style={input}
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <span 
+              style={{
+                ...eyeIcon,
+                padding: "4px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: "24px",
+              }} 
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </span>
+          </div>
+
+          <p style={forgot}>
+            <Link to="/forgot-password" style={{ color: "#00626a" }}>
+              Forgot Password?
+            </Link>
+          </p>
+
+          <button style={loginBtn} onClick={handleLogin}>
+            Login
+          </button>
+
+          <button style={googleBtn} onClick={handleGoogleAuth}>
+            Login with Google
+          </button>
+
+          <p style={signupText}>
+            New User?{" "}
+            <Link to="/register" style={{ color: "#00626a" }}>
+              Register
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
-
-/* ---------------------- Styles ---------------------- */
-
-const pageWrapper = {
-  minHeight: "100vh",
+/* ------------------- STYLES ------------------- */
+const layoutWrapper = {
   display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundImage:
-    "url('https://images.unsplash.com/photo-1508780709619-79562169bc64?auto=format&fit=crop&w=1470&q=80')",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
+  width: "100%",
+  minHeight: "100vh",
   position: "relative",
 };
 
-const overlayStyle = {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  backgroundColor: "rgba(0,0,0,0.55)",
-  backdropFilter: "blur(5px)",
+const leftPanel = {
+  flex: 1,
+  background: "linear-gradient(135deg, #00626a, #00838f)",
+  color: "white",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  textAlign: "center",
 };
 
-const homeBtnStyle = {
-  position: "absolute",
-  top: "18px",
-  left: "18px",
+const leftTitle = {
+  fontSize: "2.2rem",
+  fontWeight: "bold",
+  marginBottom: "1rem",
+};
+
+const leftImage = {
+  maxWidth: "320px",
+  marginTop: "1rem",
+  borderRadius: "10px",
+};
+
+const leftText = {
+  fontSize: "1.1rem",
+  opacity: 0.9,
+  marginTop: "1rem",
+};
+
+const pageWrapper = {
+  minHeight: "100vh",
+  flex: 1,
+  display: "flex",
+  justifyContent: "center",
+  backgroundColor: "#ffffff",
+  position: "relative",
+};
+
+const homeBtn = {
+  background: "#00626a",
+  color: "#fff",
+  borderRadius: "6px",
+  fontWeight: "bold",
+  textDecoration: "none",
   display: "flex",
   alignItems: "center",
   gap: "6px",
-  padding: "6px 10px",
-  borderRadius: "6px",
-  backgroundColor: "#fff",
-  boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-  fontWeight: "bold",
-  color: "#333",
-  textDecoration: "none",
-  zIndex: 3,
+  boxShadow: "0 3px 10px rgba(0,0,0,0.15)",
 };
 
-const containerStyle = {
-  maxWidth: "380px",
-  padding: "1.5rem",
+const card = {
   borderRadius: "10px",
-  boxShadow: "0px 6px 15px rgba(0,0,0,0.25)",
+  backgroundColor: "#fff",
+  border: "1px solid #e5e5e5",
+  boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
   textAlign: "center",
-  backgroundColor: "rgba(255,255,255,0.1)",
-  zIndex: 2,
 };
 
-const titleStyle = { marginBottom: "1rem", color: "#fff" };
+const title = {
+  fontSize: "1.8rem",
+  marginBottom: "1rem",
+  color: "#00626a",
+};
 
-const inputWrapper = {
+const inputBox = {
   display: "flex",
   alignItems: "center",
-  backgroundColor: "#f1f1f1",
-  borderRadius: "6px",
-  padding: "0.35rem 0.5rem",
-  margin: "0.5rem 0",
+  border: "1px solid #ccc",
+  borderRadius: "8px",
+  padding: "0.6rem",
+  marginTop: "0.8rem",
+  position: "relative",
+  overflow: "hidden",
 };
 
-const iconStyle = { marginRight: "6px", color: "#666" };
+const inputIcon = {
+  marginRight: "8px",
+  color: "#00626a",
+  flexShrink: 0,
+};
 
-const inputStyle = {
+const input = {
   flex: 1,
-  padding: "0.4rem",
   border: "none",
   outline: "none",
-  fontSize: "0.95rem",
-  backgroundColor: "transparent",
+  fontSize: "1rem",
+  minWidth: 0,
 };
 
-const buttonStyle = {
+const eyeIcon = {
+  cursor: "pointer",
+  color: "#00626a",
+  flexShrink: 0,
+  marginLeft: "8px",
+};
+
+const forgot = {
+  textAlign: "right",
+  marginTop: "6px",
+  fontSize: "0.9rem",
+};
+
+const loginBtn = {
   width: "100%",
-  padding: "0.55rem",
-  marginTop: "0.7rem",
-  borderRadius: "6px",
+  padding: "0.7rem",
+  backgroundColor: "#00626a",
   border: "none",
-  backgroundColor: "#4CAF50",
   color: "white",
-  fontSize: "0.95rem",
+  borderRadius: "8px",
+  marginTop: "1rem",
+  fontSize: "1rem",
   cursor: "pointer",
-  transition: "all 0.2s ease",
+  fontWeight: "bold",
 };
 
-const googleBtnStyle = {
+const googleBtn = {
   width: "100%",
-  padding: "0.55rem",
-  marginTop: "0.5rem",
-  borderRadius: "6px",
-  border: "none",
+  padding: "0.7rem",
   backgroundColor: "#fff",
-  color: "#333",
-  fontSize: "0.95rem",
+  border: "1px solid #00626a",
+  color: "#00626a",
+  borderRadius: "8px",
+  marginTop: "0.7rem",
+  fontSize: "1rem",
   cursor: "pointer",
-  transition: "all 0.2s ease",
+  fontWeight: "bold",
 };
 
-const textStyle = { marginTop: "0.8rem", color: "#fff", fontSize: "0.85rem" };
+const signupText = {
+  marginTop: "1rem",
+  fontSize: "0.95rem",
+};

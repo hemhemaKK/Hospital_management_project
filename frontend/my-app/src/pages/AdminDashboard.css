@@ -1,0 +1,486 @@
+/* AdminDashboard.css */
+
+/* Reset and Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: 250px;
+  min-height: 100vh;
+  background-color: #111;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  transition: transform 0.3s ease-in-out;
+}
+
+.sidebar.mobile-hidden {
+  transform: translateX(-100%);
+}
+
+.sidebar.mobile-visible {
+  transform: translateX(0);
+  box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+}
+
+/* Mobile Overlay */
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.mobile-overlay.visible {
+  display: block;
+}
+
+/* Hamburger Menu */
+.hamburger-menu {
+  display: none;
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1100;
+  background: #111;
+  border: none;
+  border-radius: 5px;
+  padding: 8px;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 30px;
+  height: 25px;
+}
+
+.hamburger-line {
+  width: 100%;
+  height: 3px;
+  background-color: white;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger-menu.active .hamburger-line:nth-child(1) {
+  transform: rotate(45deg) translate(6px, 6px);
+}
+
+.hamburger-menu.active .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-menu.active .hamburger-line:nth-child(3) {
+  transform: rotate(-45deg) translate(6px, -6px);
+}
+
+.profile-section {
+  padding: 1rem 0.5rem;
+  border-bottom: 1px solid #444;
+  text-align: center;
+  color: #fff;
+}
+
+.profile-pic {
+  border-radius: 50%;
+  margin-bottom: 0.5rem;
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+}
+
+.menu-item {
+  text-decoration: none;
+  color: #fff;
+  padding: 1rem;
+  display: block;
+  border-radius: 8px;
+  margin: 0.4rem 0;
+  cursor: pointer;
+  font-weight: bold;
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+}
+
+.menu-item:hover {
+  background-color: #222;
+}
+
+.menu-item.active {
+  color: #4CAF50;
+  background-color: #222;
+}
+
+.bottom-link {
+  text-decoration: none;
+  color: #fff;
+  padding: 1rem;
+  display: block;
+  border-radius: 8px;
+  margin: 0.4rem 0;
+  cursor: pointer;
+  font-weight: bold;
+  background-color: transparent;
+  text-align: center;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+}
+
+.bottom-link.logout {
+  background-color: #ff4d4d;
+}
+
+.bottom-link.logout:hover {
+  background-color: #ff3333;
+}
+
+/* Content Area */
+.content-area {
+  margin-left: 250px;
+  padding: 20px;
+  flex: 1;
+  transition: margin-left 0.3s ease;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.content-area.mobile-full {
+  margin-left: 0;
+  padding: 60px 15px 15px 15px;
+}
+
+/* Cards and Layout */
+.card {
+  background-color: #fff;
+  flex: 1 1 200px;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  text-align: center;
+  font-weight: bold;
+  font-size: 16px;
+  min-width: 0;
+}
+
+/* Table Styles */
+.table-container {
+  overflow-x: auto;
+  margin-top: 15px;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  font-size: 14px;
+  color: #333;
+  min-width: 600px; /* Minimum width for horizontal scroll */
+}
+
+.table th {
+  background-color: #020202;
+  color: #fff;
+  text-align: left;
+  padding: 12px 8px;
+  font-weight: bold;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+  font-size: 13px;
+}
+
+.table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Form Elements */
+.input-field {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.select-field {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  background: white;
+}
+
+.btn {
+  padding: 8px 12px;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-right: 5px;
+  font-size: 12px;
+  transition: opacity 0.2s ease;
+  min-height: 36px;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn-primary {
+  background-color: #4CAF50;
+}
+
+.btn-warning {
+  background-color: #ff9800;
+}
+
+.btn-danger {
+  background-color: #f44336;
+}
+
+.btn-info {
+  background-color: #2196F3;
+}
+
+.btn-secondary {
+  background-color: #888;
+}
+
+.btn:disabled {
+  background-color: #888;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.textarea-field {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  min-height: 80px;
+  resize: vertical;
+  font-size: 14px;
+}
+
+/* Layout Utilities */
+.flex-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.flex-wrap {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+}
+
+/* Status Styles */
+.status-approved {
+  color: green;
+  font-weight: bold;
+}
+
+.status-pending {
+  color: red;
+  font-weight: bold;
+}
+
+.user-info {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Mobile Responsive Styles */
+@media screen and (max-width: 768px) {
+  .hamburger-menu {
+    display: flex;
+  }
+
+  .sidebar {
+    width: 280px;
+  }
+
+  .content-area {
+    margin-left: 0;
+    padding: 60px 15px 15px 15px;
+  }
+
+  .flex-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .flex-wrap {
+    gap: 10px;
+  }
+
+  .card {
+    flex: 1 1 100%;
+    min-width: auto;
+    padding: 15px;
+    font-size: 14px;
+  }
+
+  /* Table responsive */
+  .table-container {
+    margin-top: 10px;
+    border-radius: 8px;
+  }
+
+  .table {
+    min-width: 500px; /* Smaller minimum width for mobile */
+    font-size: 12px;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px 6px;
+  }
+
+  .table th {
+    font-size: 11px;
+    padding: 10px 6px;
+  }
+
+  .table td {
+    font-size: 11px;
+  }
+
+  /* Button stack on mobile */
+  .mobile-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .btn {
+    margin-bottom: 4px;
+    margin-right: 0;
+    width: 100%;
+    font-size: 11px;
+    padding: 6px 8px;
+    min-height: 32px;
+  }
+
+  /* Form elements full width on mobile */
+  .input-field,
+  .select-field {
+    width: 100%;
+    flex: none;
+    font-size: 14px; /* Prevent zoom on iOS */
+  }
+
+  /* Profile section adjustments */
+  .profile-section {
+    padding: 0.8rem 0.5rem;
+  }
+
+  .profile-pic {
+    width: 50px;
+    height: 50px;
+  }
+
+  .menu-item,
+  .bottom-link {
+    padding: 0.8rem;
+    font-size: 13px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .content-area.mobile-full {
+    padding: 55px 10px 10px 10px;
+  }
+
+  .hamburger-menu {
+    top: 10px;
+    left: 10px;
+  }
+
+  .table {
+    min-width: 400px;
+    font-size: 11px;
+  }
+
+  .table th,
+  .table td {
+    padding: 6px 4px;
+  }
+
+  .card {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .flex-wrap {
+    gap: 8px;
+  }
+
+  .user-info {
+    font-size: 10px;
+  }
+}
+
+/* Small mobile devices */
+@media screen and (max-width: 360px) {
+  .sidebar {
+    width: 100%;
+  }
+
+  .content-area.mobile-full {
+    padding: 55px 8px 8px 8px;
+  }
+
+  .table {
+    min-width: 350px;
+  }
+
+  .table th {
+    font-size: 10px;
+    padding: 8px 4px;
+  }
+
+  .table td {
+    font-size: 10px;
+    padding: 6px 4px;
+  }
+}
+
+/* Ensure proper viewport for mobile */
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Fix for mobile scrolling */
+body {
+  position: relative;
+}

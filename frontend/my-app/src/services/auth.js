@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = "http://localhost:5000/api/auth";
+const API = "https://hospital-management-project-gf55.onrender.com/api/auth";
 
 export const register = (data) => axios.post(`${API}/register`, data);
 

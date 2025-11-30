@@ -36,7 +36,7 @@ export default function Dashboard() {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No token found");
 
-        const res = await axios.get("http://localhost:5000/api/profile", {
+        const res = await axios.get("https://hospital-management-project-gf55.onrender.com/api/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
 

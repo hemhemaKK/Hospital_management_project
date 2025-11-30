@@ -18,7 +18,7 @@ const AssignComplaint = () => {
     const fetchComplaints = async () => {
       try {
         const res = await axios.get(
-          "http://localhost:5000/api/complaints/employee-category-complaints",
+          "https://hospital-management-project-gf55.onrender.com/api/complaints/employee-category-complaints",
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -33,7 +33,7 @@ const AssignComplaint = () => {
         const subEmpObj = {};
         for (let catId of categories) {
           const subRes = await axios.get(
-            `http://localhost:5000/api/employee/sub-employees?categoryId=${catId}`,
+            `https://hospital-management-project-gf55.onrender.com/api/employee/sub-employees?categoryId=${catId}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           subEmpObj[catId] = subRes.data;
@@ -79,7 +79,7 @@ const AssignComplaint = () => {
 
     try {
       const res = await axios.put(
-        "http://localhost:5000/api/complaints/assign",
+        "https://hospital-management-project-gf55.onrender.com/api/complaints/assign",
         { complaintId, employeeId: subEmployeeId },
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -83,6 +83,21 @@ const userSchema = new mongoose.Schema(
 
     profilePic: { type: String, default: "" },
 
+    // ✅ ADDED NEW FIELDS
+    dateOfBirth: { type: Date },
+    gender: { 
+      type: String, 
+      enum: ["Male", "Female", "Other", "Prefer not to say"],
+      default: "Prefer not to say"
+    },
+    bloodGroup: { 
+      type: String, 
+      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"],
+      default: "Unknown"
+    },
+    height: { type: String, default: "" }, // Can store as "5'8" or "172 cm"
+    weight: { type: String, default: "" }, // Can store as "70 kg" or "154 lbs"
+
     role: {
       type: String,
       enum: [

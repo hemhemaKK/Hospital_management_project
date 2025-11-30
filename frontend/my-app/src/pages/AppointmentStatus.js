@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode"; // ✅ Named import
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://hospital-management-project-gf55.onrender.com";
 
 export default function AppointmentStatus() {
   const token = localStorage.getItem("token");

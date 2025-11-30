@@ -5,7 +5,7 @@ import {
 } from "recharts";
 
 const BASE_URL = "http://localhost:5000";
-const COLORS = ["#1976d2", "#2ecc71", "#e74c3c"];
+const COLORS = ["#1976d2", "#2ecc71", "#e74c3c"]; // blue, green, red
 
 export default function Report() {
   const token = localStorage.getItem("token");

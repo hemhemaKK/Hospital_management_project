@@ -1,0 +1,454 @@
+/* DoctorDashboard.css */
+
+/* Reset and Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: 250px;
+  min-height: 100vh;
+  background: #00626aee;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  transition: transform 0.3s ease-in-out;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+}
+
+.sidebar.mobile-hidden {
+  transform: translateX(-100%);
+}
+
+.sidebar.mobile-visible {
+  transform: translateX(0);
+  box-shadow: 2px 0 15px rgba(0,0,0,0.3);
+}
+
+/* Mobile Overlay */
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.mobile-overlay.visible {
+  display: block;
+}
+
+/* Hamburger Menu */
+.hamburger-menu {
+  display: none;
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1100;
+  background: #00626aee;
+  border: none;
+  border-radius: 5px;
+  padding: 8px;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 30px;
+  height: 25px;
+}
+
+.hamburger-line {
+  width: 100%;
+  height: 3px;
+  background-color: white;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger-menu.active .hamburger-line:nth-child(1) {
+  transform: rotate(45deg) translate(6px, 6px);
+}
+
+.hamburger-menu.active .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-menu.active .hamburger-line:nth-child(3) {
+  transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* Profile Section */
+.profile-section {
+  text-align: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  padding-bottom: 15px;
+}
+
+.profile-pic {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #00838f;
+  margin-bottom: 10px;
+}
+
+.menu-item {
+  padding: 12px 15px;
+  margin: 6px 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background-color: #00838f;
+}
+
+.menu-item.active {
+  background: #00838f;
+}
+
+.bottom-link {
+  padding: 12px 15px;
+  border-radius: 8px;
+  text-align: center;
+  color: #fff;
+  cursor: pointer;
+  background: #d32f2f;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+  border: none;
+  width: 100%;
+}
+
+.bottom-link:hover {
+  background: #b71c1c;
+}
+
+/* Content Area */
+.content-area {
+  flex: 1;
+  margin-left: 250px;
+  padding: 2rem;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+  width: calc(100% - 250px);
+}
+
+.content-area.mobile-full {
+  margin-left: 0;
+  padding: 60px 15px 15px 15px;
+  width: 100%;
+}
+
+/* Form Elements */
+.select-field {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.choose-btn {
+  padding: 10px 20px;
+  background: #00838f;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+  width: 100%;
+}
+
+.choose-btn:hover {
+  background: #00695c;
+}
+
+/* Table Styles */
+.table-container {
+  overflow-x: auto;
+  margin-top: 20px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  font-size: 14px;
+  color: #333;
+  min-width: 600px;
+}
+
+.table th {
+  background: #00626aee;
+  color: #fff;
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+  font-size: 13px;
+}
+
+.table tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+/* Mobile Card View for Tables */
+.mobile-card-view {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.mobile-card {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-left: 4px solid #00838f;
+}
+
+.mobile-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 5px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.mobile-card-row:last-child {
+  border-bottom: none;
+}
+
+.mobile-card-label {
+  font-weight: bold;
+  color: #555;
+  font-size: 12px;
+  min-width: 70px;
+}
+
+.mobile-card-value {
+  flex: 1;
+  text-align: right;
+  font-size: 12px;
+  color: #333;
+  word-break: break-word;
+}
+
+.mobile-card-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* Button Styles */
+.btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: opacity 0.2s ease;
+  flex: 1;
+  min-width: 70px;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn-primary {
+  background: #00838f;
+}
+
+.btn-warning {
+  background: #ff9800;
+}
+
+.btn-danger {
+  background: #f44336;
+}
+
+.btn-secondary {
+  background: #78909c;
+}
+
+/* Status Styles */
+.status-approved {
+  color: #2e7d32;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.status-pending {
+  color: #d32f2f;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+/* Layout Utilities */
+.flex-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+/* Mobile Responsive Styles */
+@media screen and (max-width: 768px) {
+  .hamburger-menu {
+    display: flex;
+  }
+
+  .sidebar {
+    width: 280px;
+  }
+
+  .content-area {
+    margin-left: 0;
+    padding: 60px 15px 15px 15px;
+    width: 100%;
+  }
+
+  .flex-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Hide table on mobile, show card view */
+  .table-container {
+    display: none;
+  }
+
+  .mobile-card-view {
+    display: flex;
+  }
+
+  .btn {
+    font-size: 11px;
+    padding: 6px 8px;
+    min-height: 32px;
+  }
+
+  .profile-pic {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+/* Small Devices (360px and below) */
+@media screen and (max-width: 360px) {
+  .sidebar {
+    width: 100%;
+  }
+
+  .content-area.mobile-full {
+    padding: 55px 10px 10px 10px;
+  }
+
+  .mobile-card {
+    padding: 12px;
+  }
+
+  .mobile-card-row {
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0;
+  }
+
+  .mobile-card-label {
+    min-width: 60px;
+    font-size: 11px;
+  }
+
+  .mobile-card-value {
+    text-align: left;
+    font-size: 11px;
+    width: 100%;
+  }
+
+  .mobile-card-actions {
+    gap: 4px;
+  }
+
+  .btn {
+    font-size: 10px;
+    padding: 5px 6px;
+    min-height: 30px;
+    min-width: 60px;
+  }
+
+  .select-field,
+  .choose-btn {
+    font-size: 14px;
+  }
+}
+
+/* Very small screens (280px and below) */
+@media screen and (max-width: 280px) {
+  .content-area.mobile-full {
+    padding: 50px 8px 8px 8px;
+  }
+
+  .mobile-card {
+    padding: 10px;
+  }
+
+  .mobile-card-label {
+    font-size: 10px;
+    min-width: 50px;
+  }
+
+  .mobile-card-value {
+    font-size: 10px;
+  }
+
+  .btn {
+    font-size: 9px;
+    padding: 4px 5px;
+    min-height: 28px;
+    min-width: 50px;
+  }
+}

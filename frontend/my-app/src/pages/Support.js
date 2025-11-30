@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://hospital-management-project-gf55.onrender.com";
 
 export default function Support() {
   const token = localStorage.getItem("token");

@@ -13,7 +13,7 @@ const ComplaintStatus = () => {
     const fetchComplaints = async () => {
       try {
         setLoading(true);
-        const res = await axios.get("http://localhost:5000/api/complaints/complaints", {
+        const res = await axios.get("https://hospital-management-project-gf55.onrender.com/api/complaints/complaints", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setComplaints(res.data);

@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import ProfileSettings from "./ProfileSettings";
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = "https://hospital-management-project-gf55.onrender.com/api";
 
 export default function NurseDashboard() {
   const navigate = useNavigate();

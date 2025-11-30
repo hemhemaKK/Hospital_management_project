@@ -33,7 +33,7 @@ const localizer = dateFnsLocalizer({
     locales,
 });
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = "https://hospital-management-project-gf55.onrender.com/api";
 
 export default function ReceptionistDashboard() {
     const navigate = useNavigate();
