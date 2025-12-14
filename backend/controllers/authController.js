@@ -4,8 +4,6 @@ const sgMail = require("@sendgrid/mail");
 const User = require("../models/User");
 const Hospital = require("../models/Hospital")
 
-// ⭐ ADDED for Google OAuth2
-const { OAuth2Client } = require("google-auth-library");
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
@@ -84,7 +82,7 @@ exports.register = async (req, res) => {
     }
 
     await newUser.save();
-    // await sendOTP(email, otp);
+    await sendOTP(email, otp);
 
     res.status(201).json({ msg: "OTP sent to email", role });
   } catch (err) {
@@ -207,77 +205,3 @@ exports.login = async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 };
-
-// ==================================================
-// ⭐⭐ GOOGLE OAUTH2 ADDITIONS START HERE ⭐⭐
-// ==================================================
-
-const oauthClient = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI
-);
-
-// -------------------------------------
-// ⭐ Step 1: Give Google Login URL
-// -------------------------------------
-exports.getGoogleAuthURL = async (req, res) => {
-  const url = oauthClient.generateAuthUrl({
-    access_type: "offline",
-    prompt: "consent",
-    scope: ["profile", "email"],
-  });
-
-  return res.redirect(url);  // 🔥 IMPORTANT
-};
-// -------------------------------------
-// ⭐ Step 2: Google OAuth Callback with redirect
-// -------------------------------------
-exports.googleCallback = async (req, res) => {
-  try {
-    const code = req.query.code;
-    if (!code) return res.redirect(`${process.env.FRONTEND_URL}/login`);
-
-    const { tokens } = await oauthClient.getToken(code);
-    const ticket = await oauthClient.verifyIdToken({
-      idToken: tokens.id_token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    const { email, name, picture, sub } = payload;
-
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      // Identify role based on email prefix
-      let role = "user";
-      const lower = email.toLowerCase();
-
-      if (lower.startsWith("superadmin")) role = "superadmin";
-      else if (lower.startsWith("doctor")) role = "doctor";
-      else if (lower.startsWith("nurse")) role = "nurse";
-      else if (lower.startsWith("recep")) role = "receptionist";
-      else if (lower.startsWith("pharma")) role = "pharmacist";
-
-      user = await User.create({
-        name,
-        email,
-        googleId: sub,
-        isVerified: true,
-        profilePic: picture,
-        role,
-      });
-    }
-
-    const token = generateToken(user);
-
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    return res.redirect(`${frontendUrl}/google-callback?token=${token}&role=${user.role}`);
-
-  } catch (err) {
-    console.error("Google OAuth Error:", err);
-    return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_login_failed`);
-  }
-};
-
