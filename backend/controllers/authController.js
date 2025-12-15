@@ -82,7 +82,7 @@ exports.register = async (req, res) => {
     }
 
     await newUser.save();
-    // await sendOTP(email, otp);
+    await sendOTP(email, otp);
 
     res.status(201).json({ msg: "OTP sent to email", role });
   } catch (err) {
