@@ -272,7 +272,7 @@ exports.googleCallback = async (req, res) => {
 
     const token = generateToken(user);
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const frontendUrl = process.env.FRONTEND_URL || "https://hospital-management-project-rosy.vercel.app";
     return res.redirect(`${frontendUrl}/google-callback?token=${token}&role=${user.role}`);
 
   } catch (err) {

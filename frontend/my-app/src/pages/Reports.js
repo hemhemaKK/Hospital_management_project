@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend, ResponsiveContainer
 } from "recharts";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://hospital-management-project-gf55.onrender.com";
 const COLORS = ["#1976d2", "#2ecc71", "#e74c3c"]; // blue, green, red
 
 export default function Report() {
